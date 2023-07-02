@@ -20,8 +20,8 @@ def venv():
     otherwise just install packages on Windows.
     """
     script_contents = """#!/bin/bash
-    source venv/bin/activate
-    python start.py
+source venv/bin/activate
+python start.py
     """
     if platform.system() != "Windows":
         if sys.prefix == sys.base_prefix:
