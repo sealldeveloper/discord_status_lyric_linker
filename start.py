@@ -1,7 +1,6 @@
 """Start.py.
     Intitialize the environment variables and start the bot.
 """
-import importlib
 import os
 import pathlib
 import platform
@@ -20,31 +19,50 @@ def venv():
     """Start a venv on linux and install packages.
     otherwise just install packages on Windows.
     """
+    script_contents = """#!/bin/bash
+    source venv/bin/activate
+    python start.py
+    """
     if platform.system() != "Windows":
         if sys.prefix == sys.base_prefix:
-            subprocess.Popen(["python", "venv.py"])
+            print(
+                "You're currently not in a venv, make sure you are. \n"
+                "I'll generate a script called run.sh that should restart this in a venv, \n"
+                "but before that, I'll make a venv for you. \n"
+                "IMPORTANT: Make sure to run run.sh or start.py in an active venv! \n"
+                "This interaction will repeat if you run start.py outside of a venv."
+            )
+            # trunk-ignore(bandit/B603)
+            subprocess.run([sys.executable, "-m", "venv", "venv"], check=True)
+            with open("run.sh", "w", encoding="utf-8") as file:
+                file.write(script_contents)
+            # trunk-ignore(bandit/B607)
+            # trunk-ignore(bandit/B603)
+            subprocess.run(["chmod", "+x", "run.sh"], check=True)
             sys.exit(0)
+        # trunk-ignore(bandit/B603)
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True
         )
-        pip_executable = pathlib.PurePath(sys.executable).parent
+        pip_executable = pathlib.PurePath(sys.executable).parent / "pip"
         print(pip_executable)
-        sys.exit()
+        print(sys.executable)
     else:
         pip_executable = pathlib.PurePath(sys.executable).parent / "Scripts" / "pip.exe"
         # trunk-ignore(bandit/B603)
-        subprocess.run(
-            [
-                pip_executable,
-                "install",
-                "grequests",
-                "fpstimer",
-                "spotipy",
-                "python_dotenv",
-                "gevent",
-            ],
-            check=True,
-        )
+    subprocess.run(
+        [
+            pip_executable,
+            "install",
+            "grequests",
+            "fpstimer",
+            "spotipy",
+            "python_dotenv",
+            "gevent",
+        ],
+        check=True,
+    )
+    clear()
     # subprocess.run([python_executable, "-m", "pip", "install", "--upgrade", "pip"])
     # Doesn't this break shit on windows? Better to not update pip
 
@@ -64,8 +82,12 @@ def clear():
     Non-platform specific.
     """
     if platform.system() == "Windows":
+        # trunk-ignore(bandit/B607)
+        # trunk-ignore(bandit/B605)
         os.system("cls")
     else:
+        # trunk-ignore(bandit/B607)
+        # trunk-ignore(bandit/B605)
         os.system("clear")
 
 
