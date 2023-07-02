@@ -1,6 +1,7 @@
 """Start.py.
     Intitialize the environment variables and start the bot.
 """
+import importlib
 import os
 import pathlib
 import platform
@@ -20,12 +21,15 @@ def venv():
     otherwise just install packages on Windows.
     """
     if platform.system() != "Windows":
-        # trunk-ignore(bandit/B603)
-        subprocess.run([sys.executable, "-m", "venv", "venv"], check=True)
-        # trunk-ignore(bandit/B603)
+        if sys.prefix == sys.base_prefix:
+            subprocess.Popen(["python", "venv.py"])
+            sys.exit(0)
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True
         )
+        pip_executable = pathlib.PurePath(sys.executable).parent
+        print(pip_executable)
+        sys.exit()
     else:
         pip_executable = pathlib.PurePath(sys.executable).parent / "Scripts" / "pip.exe"
         # trunk-ignore(bandit/B603)
@@ -101,6 +105,7 @@ def main():
     """Start the self bot.
     and generates a .env file if it doesn't exist and runs bot.py with credentials given.
     """
+    venv()
     if not os.path.isfile(".env"):
         create_env_file(get_credentials())
 
