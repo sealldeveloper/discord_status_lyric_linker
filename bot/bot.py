@@ -22,6 +22,8 @@ SPOTIFY_ID = os.environ.get("SPOTIFY_ID")
 SPOTIFY_SECRET = os.environ.get("SPOTIFY_SECRET")
 SPOTIFY_REDIRECT = os.environ.get("SPOTIFY_REDIRECT")
 CUSTOM_STATUS = os.environ.get("STATUS")
+CUSTOM_STATUS_EMOJI_NAME = os.environ.get("STATUS_EMOJI_NAME")
+CUSTOM_STATUS_EMOJI_ID = os.environ.get("STATUS_EMOJI_ID")
 SCOPE = "user-read-currently-playing"
 TIMER = fpstimer.FPSTimer(2)
 
@@ -36,6 +38,22 @@ def clear():
         os.system("clear")
 
 
+def send_status_request(text, emoji_name, emoji_id):
+    req = grequests.patch(
+        url="https://discord.com/api/v6/users/@me/settings",
+        headers={"authorization": API_TOKEN},
+        json={
+            "custom_status": {
+                "text": text,
+                "emoji_name": emoji_name,
+                "emoji_id": emoji_id,
+            }
+        },
+        timeout=10,
+    )
+    grequests.send(req, grequests.Pool(1))
+
+
 def main(spotify, line_last_played):
     try:
         song = spotify.current_user_playing_track()
@@ -43,15 +61,12 @@ def main(spotify, line_last_played):
         # IF NO SONG IS PLAYING
         if not song:
             if line_last_played == "NO SONG":
-                return "", "NO SONG"
-            requests.patch(
-                url="https://discord.com/api/v6/users/@me/settings",
-                headers={"authorization": API_TOKEN},
-                json={"custom_status": {"text": CUSTOM_STATUS, "emoji_name": "🎵"}},
-                timeout=10,
+                return "NO SONG"
+            send_status_request(
+                CUSTOM_STATUS, CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID
             )
             TIMER.sleep()
-            return "", "NO SONG"
+            return "NO SONG"
 
         track_id = song["item"]["uri"].split(":")[-1]
         current_time = song["progress_ms"]
@@ -65,16 +80,11 @@ def main(spotify, line_last_played):
         if lyrics["error"] is True or lyrics["syncType"] == "UNSYNCED":
             # If we've already been here this song, don't bother changing again, just return.
             if line_last_played == "NO LYRICS":
-                return song["item"]["name"], last_played_line
-            req = grequests.patch(
-                url="https://discord.com/api/v6/users/@me/settings",
-                headers={"authorization": API_TOKEN},
-                json={"custom_status": {"text": "", "emoji_name": "🎵"}},
-                timeout=10,
-            )
-            grequests.send(req, grequests.Pool(1))
+                return last_played_line
+            send_status_request("", CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID)
+            print_if_different(formatted_currently_playing)
             line_last_played = "NO LYRICS"
-            return song["item"]["name"], line_last_played
+            return line_last_played
 
         # IF THERE ARE LYRICS
         else:
@@ -89,38 +99,29 @@ def main(spotify, line_last_played):
             if (
                 line_last_played != next_line
             ):  # no need to update if the line hasn't changed.
-                if next_line == "♪":
-                    status_req = grequests.patch(
-                        url="https://discord.com/api/v6/users/@me/settings",
-                        headers={"authorization": API_TOKEN},
-                        json={"custom_status": {"text": "", "emoji_name": "🎵"}},
-                        timeout=10,
+                if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
+                    send_status_request(
+                        "", CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID
                     )
                     print_if_different(formatted_currently_playing)
-                    grequests.send(status_req, grequests.Pool(1))
                 elif next_line != "":
-                    status_req = grequests.patch(
-                        url="https://discord.com/api/v6/users/@me/settings",
-                        headers={"authorization": API_TOKEN},
-                        json={"custom_status": {"text": next_line, "emoji_name": "🎵"}},
-                        timeout=10,
+                    send_status_request(
+                        next_line, CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID
                     )
                     print_if_different(
                         f"{formatted_currently_playing}\nCurrent Lyric: {next_line}"
                     )
-                    grequests.send(status_req, grequests.Pool(1))
+                elif next_line == "" and CUSTOM_STATUS_EMOJI_NAME == "":
+                    send_status_request("♪", "", "")
+                    print_if_different(formatted_currently_playing)
                 else:
-                    status_req = grequests.patch(
-                        url="https://discord.com/api/v6/users/@me/settings",
-                        headers={"authorization": API_TOKEN},
-                        json={"custom_status": {"text": "", "emoji_name": "🎵"}},
-                        timeout=10,
+                    send_status_request(
+                        "", CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID
                     )
                     print_if_different(formatted_currently_playing)
-                    grequests.send(status_req, grequests.Pool(1))
 
             line_last_played = next_line
-            return song["item"]["name"], line_last_played
+            return line_last_played
 
     except (requests.exceptions.RequestException, spotipy.SpotifyException) as error:
         print("An error occurred:", str(error))
@@ -128,12 +129,7 @@ def main(spotify, line_last_played):
 
 
 def signal_handler():
-    requests.patch(
-        url="https://discord.com/api/v6/users/@me/settings",
-        headers={"authorization": API_TOKEN},
-        json={"custom_status": {"text": CUSTOM_STATUS, "emoji_name": ""}},
-        timeout=10,
-    )
+    send_status_request(CUSTOM_STATUS, CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID)
     sys.exit(0)
 
 

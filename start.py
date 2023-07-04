@@ -75,6 +75,8 @@ def create_env_file(creds: list):
         file.write(f"SPOTIFY_SECRET = {creds[2]}\n")
         file.write(f"SPOTIFY_REDIRECT = {creds[3]}\n")
         file.write(f"STATUS = {creds[4]}\n")
+        file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
+        file.write(f"STATUS_EMOJI_ID = {creds[6]}\n")
 
 
 def clear():
@@ -114,12 +116,20 @@ def get_credentials():
     custom_status = input(
         "Enter custom status (shows when there is no lyrics/no song is playing): "
     )
+    print(
+        "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
+        "Emoji ID is required for custom emojis."
+    )
+    status_emoji_name = input("Enter emoji name for status: ")
+    status_emoji_id = input("Enter emoji ID for status: ")
     return [
         discord_token,
         spotify_client_id,
         spotify_client_secret,
         spotify_redirect_uri,
         custom_status,
+        status_emoji_name,
+        status_emoji_id,
     ]
 
 
