@@ -75,8 +75,13 @@ def create_env_file(creds: list):
         file.write(f"SPOTIFY_SECRET = {creds[2]}\n")
         file.write(f"SPOTIFY_REDIRECT = {creds[3]}\n")
         file.write(f"STATUS = {creds[4]}\n")
-        file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
-        file.write(f"STATUS_EMOJI_ID = {creds[6]}\n")
+        if creds[7] is False:
+            file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
+            file.write("NITRO = FALSE\n")
+        else:
+            file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
+            file.write(f"STATUS_EMOJI_ID = {creds[6]}\n")
+            file.write("NITRO = TRUE\n")
 
 
 def clear():
@@ -116,12 +121,22 @@ def get_credentials():
     custom_status = input(
         "Enter custom status (shows when there is no lyrics/no song is playing): "
     )
-    print(
-        "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
-        "Emoji ID is required for custom emojis."
-    )
-    status_emoji_name = input("Enter emoji name for status: ")
-    status_emoji_id = input("Enter emoji ID for status: ")
+    nitro = input("Do you want to use custom emoji (nitro only)? (y/n): ")
+    if nitro.lower() == "y":
+        nitro = True
+    else:
+        nitro = False
+
+    if nitro is False:
+        print("This is the emoji that will be used for the status.")
+        status_emoji_name = input("Enter emoji name for status: ")
+    else:
+        print(
+            "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
+            "Emoji ID is required for custom emojis."
+        )
+        status_emoji_name = input("Enter emoji name for status: ")
+        status_emoji_id = input("Enter emoji ID for status: ")
     return [
         discord_token,
         spotify_client_id,
@@ -130,6 +145,7 @@ def get_credentials():
         custom_status,
         status_emoji_name,
         status_emoji_id,
+        nitro,
     ]
 
 
@@ -137,7 +153,6 @@ def main():
     """Start the self bot.
     and generates a .env file if it doesn't exist and runs bot.py with credentials given.
     """
-    venv()
     if not os.path.isfile(".env"):
         create_env_file(get_credentials())
 
