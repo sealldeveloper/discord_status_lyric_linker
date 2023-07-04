@@ -54,6 +54,21 @@ def send_status_request(text, emoji_name, emoji_id):
     grequests.send(req, grequests.Pool(1))
 
 
+def patch_status_request(text, emoji_name, emoji_id):
+    requests.patch(
+        url="https://discord.com/api/v6/users/@me/settings",
+        headers={"authorization": API_TOKEN},
+        json={
+            "custom_status": {
+                "text": text,
+                "emoji_name": emoji_name,
+                "emoji_id": emoji_id,
+            }
+        },
+        timeout=10,
+    )
+
+
 def main(spotify, line_last_played):
     try:
         song = spotify.current_user_playing_track()
@@ -62,7 +77,7 @@ def main(spotify, line_last_played):
         if not song:
             if line_last_played == "NO SONG":
                 return "NO SONG"
-            send_status_request(
+            patch_status_request(
                 CUSTOM_STATUS, CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID
             )
             TIMER.sleep()
@@ -129,7 +144,9 @@ def main(spotify, line_last_played):
 
 
 def signal_handler():
-    send_status_request(CUSTOM_STATUS, CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID)
+    patch_status_request(
+        CUSTOM_STATUS, CUSTOM_STATUS_EMOJI_NAME, CUSTOM_STATUS_EMOJI_ID
+    )
     sys.exit(0)
 
 
