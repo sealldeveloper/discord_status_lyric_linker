@@ -45,26 +45,21 @@ class StatusScreen:  # working on, currently dead code
             self.last_line = text
 
 
-def clear():  # working on, currently dead code
-    if platform.system() == "Windows":
-        if platform.release() in {"10", "11"}:
-            subprocess.run(
-                "", shell=True, check=True
-            )  # Needed to fix a bug regarding Windows 10; not sure about Windows 11
-            print("\033c", end="")
-        else:
-            subprocess.run(["cls"], check=True)
-    else:  # Linux and Mac
-        print("\033c", end="")
+class Request:  # working on, currently dead code
+    def __init__(self):
+        self.last_line = ""
 
+    def grequest_if_different(self, text, status):
+        if text != self.last_line:
+            send_grequest(text)
+            print(status)
+            self.last_line = text
 
-def status_screen():  # working on, currently dead code
-    console = rich.console.Console(color_system="auto")
-    console.print(
-        "┌─────"
-        "[link=https://www.willmcgugan.com]discord-status-lyric-linker[/link]"
-        "─────┐"
-    )
+    def request_if_different(self, text, status):
+        if text != self.last_line:
+            send_request(text)
+            print(status)
+            self.last_line = text
 
 
 def send_grequest(text):
@@ -124,6 +119,28 @@ def send_request(text):
         )
 
 
+def clear():  # working on, currently dead code
+    if platform.system() == "Windows":
+        if platform.release() in {"10", "11"}:
+            subprocess.run(
+                "", shell=True, check=True
+            )  # Needed to fix a bug regarding Windows 10; not sure about Windows 11
+            print("\033c", end="")
+        else:
+            subprocess.run(["cls"], check=True)
+    else:  # Linux and Mac
+        print("\033c", end="")
+
+
+def status_screen():  # working on, currently dead code
+    console = rich.console.Console(color_system="auto")
+    console.print(
+        "┌─────"
+        "[link=https://www.willmcgugan.com]discord-status-lyric-linker[/link]"
+        "─────┐"
+    )
+
+
 def main(last_played_song, last_played_line, song, lyrics):
     start = time.time()
 
@@ -132,8 +149,9 @@ def main(last_played_song, last_played_line, song, lyrics):
         if last_played_line == "NO SONG":
             TIMER.sleep()
             return "", "NO SONG"
-        print("DISCORD: NOT CURRENTLY LISTENING UPDATE")
-        send_request(CUSTOM_STATUS)
+        Request.request_if_different(
+            CUSTOM_STATUS, "DISCORD: NOT CURRENTLY LISTENING UPDATE"
+        )
         TIMER.sleep()
         return "", "NO SONG"
 
@@ -148,8 +166,9 @@ def main(last_played_song, last_played_line, song, lyrics):
         if last_played_line == "NO LYRICS" and song_name == last_played_song:
             TIMER.sleep()
             return song["item"]["name"], last_played_line
-        print("DISCORD: NO SYNCED LYRICS UPDATE")
-        send_grequest(formatted_currently_playing)
+        Request.grequest_if_different(
+            formatted_currently_playing, "DISCORD: NO SYNCED LYRICS"
+        )
         last_played_line = "NO LYRICS"
         TIMER.sleep()
         return song["item"]["name"], last_played_line
@@ -158,12 +177,11 @@ def main(last_played_song, last_played_line, song, lyrics):
     else:
         next_line = get_next_line(lyrics, current_time)
         if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            send_grequest("")
+            Request.grequest_if_different("", "")
         elif (
             last_played_line != next_line
         ):  # no need to update if the line hasn't changed.
-            print("DISCORD: NEW LYRIC LINE UPDATE")
-            send_grequest(next_line)
+            Request.grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE")
             last_played_line = next_line
     TIMER.sleep()
     end = time.time()
