@@ -142,6 +142,7 @@ def status_screen():  # working on, currently dead code
 
 
 def main(last_played_song, last_played_line, song, lyrics):
+    request = Request()
     start = time.time()
 
     # IF NO SONG IS PLAYING
@@ -149,8 +150,9 @@ def main(last_played_song, last_played_line, song, lyrics):
         if last_played_line == "NO SONG":
             TIMER.sleep()
             return "", "NO SONG"
-        Request.request_if_different(
-            CUSTOM_STATUS, "DISCORD: NOT CURRENTLY LISTENING UPDATE"
+        request.request_if_different(
+            CUSTOM_STATUS,
+            "DISCORD: NOT CURRENTLY LISTENING UPDATE",
         )
         TIMER.sleep()
         return "", "NO SONG"
@@ -166,7 +168,7 @@ def main(last_played_song, last_played_line, song, lyrics):
         if last_played_line == "NO LYRICS" and song_name == last_played_song:
             TIMER.sleep()
             return song["item"]["name"], last_played_line
-        Request.grequest_if_different(
+        request.grequest_if_different(
             formatted_currently_playing, "DISCORD: NO SYNCED LYRICS"
         )
         last_played_line = "NO LYRICS"
@@ -177,11 +179,11 @@ def main(last_played_song, last_played_line, song, lyrics):
     else:
         next_line = get_next_line(lyrics, current_time)
         if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            Request.grequest_if_different(Request, "", "")
+            request.grequest_if_different("", "")
         elif (
             last_played_line != next_line
         ):  # no need to update if the line hasn't changed.
-            Request.grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE")
+            request.grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE")
             last_played_line = next_line
     TIMER.sleep()
     end = time.time()
@@ -232,19 +234,18 @@ if __name__ == "__main__":
     main_loops = 0
     sp, auth = get_spotipy()
     while True:
-        try:
-            if (
-                main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC)
-                == 0
-            ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
-                song, lyrics = on_new_song(sp)
-                if song["is_playing"] is False:
-                    song = None
-            last_played_song, last_played_line = main(
-                song_last_played, line_last_played, song, lyrics
-            )
-            main_loops += 1
-        except Exception as e:
-            print(str(e))
-            sp, auth = get_spotipy()
-            time.sleep(3)
+        # try:
+        if (
+            main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC) == 0
+        ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
+            song, lyrics = on_new_song(sp)
+            if song["is_playing"] is False:
+                song = None
+        last_played_song, last_played_line = main(
+            song_last_played, line_last_played, song, lyrics
+        )
+        main_loops += 1
+    # except Exception as e:
+    #    print(str(e))
+    #    sp, auth = get_spotipy()
+    #    time.sleep(3)
