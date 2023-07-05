@@ -177,7 +177,7 @@ def main(last_played_song, last_played_line, song, lyrics):
     else:
         next_line = get_next_line(lyrics, current_time)
         if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            Request.grequest_if_different("", "")
+            Request.grequest_if_different(Request, "", "")
         elif (
             last_played_line != next_line
         ):  # no need to update if the line hasn't changed.
