@@ -33,19 +33,18 @@ SECONDS_TO_SPOTIFY_RESYNC = 10  # Rate at which Spotify is polled for currently 
 
 TIMER = fpstimer.FPSTimer(LYRIC_UPDATE_RATE_PER_SECOND)
 
+last_line = ""
+
 
 class StatusScreen:  # working on, currently dead code
     def __init__(self):
-        self.last_line = ""
         self.console = rich.console.Console(color_system="auto")
 
     def print_if_different(self, text):
-        if text != self.last_line:
+        if text != last_line:
+            global last_line
             self.console.print(text)
-            self.last_line = text
-
-
-last_line = ""
+            last_line = text
 
 
 def grequest_if_different(text, status):
