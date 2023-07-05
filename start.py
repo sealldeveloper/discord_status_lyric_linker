@@ -13,6 +13,19 @@ from getpass import getpass
 # Soon gonna check if it works on Windows.
 
 
+def clear():
+    if platform.system() == "Windows":
+        if platform.release() in {"10", "11"}:
+            subprocess.run(
+                "", shell=True, check=True
+            )  # Needed to fix a bug regarding Windows 10; not sure about Windows 11
+            print("\033c", end="")
+        else:
+            subprocess.run(["cls"], check=True)
+    else:  # Linux and Mac
+        print("\033c", end="")
+
+
 def venv():
     """Start a venv on linux and install packages.
     otherwise just install packages on Windows.
