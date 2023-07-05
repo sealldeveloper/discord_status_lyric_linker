@@ -8,8 +8,6 @@ import subprocess
 import sys
 from getpass import getpass
 
-from bot.bot import clear
-
 # N0v4 what kind of crack are you smoking?
 # Anyway I fixed a lot of the code base.
 # Soon gonna check if it works on Windows.
