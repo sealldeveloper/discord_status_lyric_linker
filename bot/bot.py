@@ -235,18 +235,19 @@ if __name__ == "__main__":
     main_loops = 0
     sp, auth = get_spotipy()
     while True:
-        # try:
-        if (
-            main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC) == 0
-        ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
-            song, lyrics = on_new_song(sp)
-            if song["is_playing"] is False:
-                song = None
-        last_played_song, last_played_line = main(
-            song_last_played, line_last_played, song, lyrics
-        )
-        main_loops += 1
-    # except Exception as e:
-    #    print(str(e))
-    #    sp, auth = get_spotipy()
-    #    time.sleep(3)
+        try:
+            if (
+                main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC)
+                == 0
+            ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
+                song, lyrics = on_new_song(sp)
+                if song["is_playing"] is False:
+                    song = None
+            last_played_song, last_played_line = main(
+                song_last_played, line_last_played, song, lyrics
+            )
+            main_loops += 1
+        except Exception as e:
+            print(str(e))
+            sp, auth = get_spotipy()
+            time.sleep(3)
