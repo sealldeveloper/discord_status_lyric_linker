@@ -130,6 +130,7 @@ def get_credentials():
     if nitro is False:
         print("This is the emoji that will be used for the status.")
         status_emoji_name = input("Enter emoji name for status: ")
+        status_emoji_id = ""
     else:
         print(
             "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
