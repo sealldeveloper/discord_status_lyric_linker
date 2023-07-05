@@ -58,7 +58,7 @@ def grequest_if_different(text, status):
 
 def request_if_different(text, status):
     global last_line
-    if text != self.last_line:
+    if text != last_line:
         print(status)
         send_request(text)
         last_line = text
