@@ -41,8 +41,8 @@ class StatusScreen:  # working on, currently dead code
         self.console = rich.console.Console(color_system="auto")
 
     def print_if_different(self, text):
+        global last_line
         if text != last_line:
-            global last_line
             self.console.print(text)
             last_line = text
 
