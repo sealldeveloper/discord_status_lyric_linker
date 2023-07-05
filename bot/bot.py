@@ -1,9 +1,12 @@
 import os
+import platform
+import subprocess
 import time
 
 import fpstimer
 import grequests
 import requests
+import rich
 import spotipy
 from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
@@ -29,6 +32,39 @@ LYRIC_UPDATE_RATE_PER_SECOND = 10  # Rate at which the program updates the numbe
 SECONDS_TO_SPOTIFY_RESYNC = 10  # Rate at which Spotify is polled for currently playing song and time. Low numbers will be more consistent but may result in ratelimiting.
 
 TIMER = fpstimer.FPSTimer(LYRIC_UPDATE_RATE_PER_SECOND)
+
+
+class StatusScreen:  # working on, currently dead code
+    def __init__(self):
+        self.last_line = ""
+        self.console = rich.console.Console(color_system="auto")
+
+    def print_if_different(self, text):
+        if text != self.last_line:
+            self.console.print(text)
+            self.last_line = text
+
+
+def clear():  # working on, currently dead code
+    if platform.system() == "Windows":
+        if platform.release() in {"10", "11"}:
+            subprocess.run(
+                "", shell=True, check=True
+            )  # Needed to fix a bug regarding Windows 10; not sure about Windows 11
+            print("\033c", end="")
+        else:
+            subprocess.run(["cls"], check=True)
+    else:  # Linux and Mac
+        print("\033c", end="")
+
+
+def status_screen():  # working on, currently dead code
+    console = rich.console.Console(color_system="auto")
+    console.print(
+        "┌─────"
+        "[link=https://www.willmcgugan.com]discord-status-lyric-linker[/link]"
+        "─────┐"
+    )
 
 
 def send_grequest(text):

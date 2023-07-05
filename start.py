@@ -4,11 +4,11 @@
 import os
 import pathlib
 import platform
-
-# trunk-ignore(bandit/B404)
 import subprocess
 import sys
 from getpass import getpass
+
+from bot.bot import clear
 
 # N0v4 what kind of crack are you smoking?
 # Anyway I fixed a lot of the code base.
@@ -59,6 +59,7 @@ python start.py
             "spotipy",
             "python_dotenv",
             "gevent",
+            "rich",
         ],
         check=True,
     )
@@ -84,20 +85,6 @@ def create_env_file(creds: list):
             file.write("NITRO = TRUE\n")
 
 
-def clear():
-    """Clear the screen.
-    Non-platform specific.
-    """
-    if platform.system() == "Windows":
-        # trunk-ignore(bandit/B607)
-        # trunk-ignore(bandit/B605)
-        os.system("cls")
-    else:
-        # trunk-ignore(bandit/B607)
-        # trunk-ignore(bandit/B605)
-        os.system("clear")
-
-
 def get_credentials():
     """Recieve credentials for the self bot.
     And later returns them as a list for .env use.
@@ -121,23 +108,30 @@ def get_credentials():
     custom_status = input(
         "Enter custom status (shows when there is no lyrics/no song is playing): "
     )
-    nitro = input("Do you want to use custom emoji (nitro only)? (y/n): ")
-    if nitro.lower() == "y":
-        nitro = True
+    custom_status_emoji = input("Do you want to use custom emoji? (y/n): ")
+    if custom_status_emoji.lower() == "y":
+        nitro = input("Do you want to use custom emoji (nitro only)? (y/n): ")
+        if nitro.lower() == "y":
+            nitro = True
+        else:
+            nitro = False
+
+        if nitro is False:
+            print("This is the emoji that will be used for the status.")
+            status_emoji_name = input("Enter emoji name for status: ")
+            status_emoji_id = ""
+        else:
+            print(
+                "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
+                "Emoji ID is required for custom emojis."
+            )
+            status_emoji_name = input("Enter emoji name for status: ")
+            status_emoji_id = input("Enter emoji ID for status: ")
     else:
         nitro = False
-
-    if nitro is False:
-        print("This is the emoji that will be used for the status.")
-        status_emoji_name = input("Enter emoji name for status: ")
+        status_emoji_name = ""
         status_emoji_id = ""
-    else:
-        print(
-            "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
-            "Emoji ID is required for custom emojis."
-        )
-        status_emoji_name = input("Enter emoji name for status: ")
-        status_emoji_id = input("Enter emoji ID for status: ")
+
     return [
         discord_token,
         spotify_client_id,
