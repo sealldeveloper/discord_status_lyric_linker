@@ -159,8 +159,8 @@ def main(last_played_song, last_played_line, song, lyrics):
 
     current_time = song["progress_ms"]
     song_name = song["item"]["name"]
-    artist_name = song["item"]["artists"][0]["name"]
-    formatted_currently_playing = f"{song_name} -- {artist_name}"
+    # artist_name = song["item"]["artists"][0]["name"]
+    # formatted_currently_playing = f"{song_name} -- {artist_name}"
 
     # IF THERE ARE NO LYRICS
     if lyrics["error"] is True or lyrics["syncType"] == "UNSYNCED":
@@ -169,7 +169,7 @@ def main(last_played_song, last_played_line, song, lyrics):
             TIMER.sleep()
             return song["item"]["name"], last_played_line
         grequest_if_different(
-            formatted_currently_playing,
+            CUSTOM_STATUS,
             "DISCORD: NO SYNCED LYRICS",
         )
         last_played_line = "NO LYRICS"
