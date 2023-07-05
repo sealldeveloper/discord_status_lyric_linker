@@ -45,21 +45,23 @@ class StatusScreen:  # working on, currently dead code
             self.last_line = text
 
 
-class Request:  # working on, currently dead code
-    def __init__(self):
-        self.last_line = ""
+last_line = ""
 
-    def grequest_if_different(self, text, status):
-        if text != self.last_line:
-            send_grequest(text)
-            print(status)
-            self.last_line = text
 
-    def request_if_different(self, text, status):
-        if text != self.last_line:
-            send_request(text)
-            print(status)
-            self.last_line = text
+def grequest_if_different(text, status):
+    global last_line
+    if text != last_line:
+        print(status)
+        send_grequest(text)
+        last_line = text
+
+
+def request_if_different(text, status):
+    global last_line
+    if text != self.last_line:
+        print(status)
+        send_request(text)
+        last_line = text
 
 
 def send_grequest(text):
@@ -91,7 +93,7 @@ def send_grequest(text):
     grequests.send(req, grequests.Pool(1))
 
 
-def send_request(text):
+def send_request(self, text):
     if NITRO == "TRUE":
         requests.patch(
             url="https://discord.com/api/v6/users/@me/settings",
@@ -142,7 +144,6 @@ def status_screen():  # working on, currently dead code
 
 
 def main(last_played_song, last_played_line, song, lyrics):
-    request = Request()
     start = time.time()
 
     # IF NO SONG IS PLAYING
@@ -150,7 +151,7 @@ def main(last_played_song, last_played_line, song, lyrics):
         if last_played_line == "NO SONG":
             TIMER.sleep()
             return "", "NO SONG"
-        request.request_if_different(
+        request_if_different(
             CUSTOM_STATUS,
             "DISCORD: NOT CURRENTLY LISTENING UPDATE",
         )
@@ -168,8 +169,9 @@ def main(last_played_song, last_played_line, song, lyrics):
         if last_played_line == "NO LYRICS" and song_name == last_played_song:
             TIMER.sleep()
             return song["item"]["name"], last_played_line
-        request.grequest_if_different(
-            formatted_currently_playing, "DISCORD: NO SYNCED LYRICS"
+        grequest_if_different(
+            formatted_currently_playing,
+            "DISCORD: NO SYNCED LYRICS",
         )
         last_played_line = "NO LYRICS"
         TIMER.sleep()
@@ -179,11 +181,11 @@ def main(last_played_song, last_played_line, song, lyrics):
     else:
         next_line = get_next_line(lyrics, current_time)
         if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            request.grequest_if_different("", "")
+            grequest_if_different("", "")
         elif (
             last_played_line != next_line
         ):  # no need to update if the line hasn't changed.
-            request.grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE")
+            grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE")
             last_played_line = next_line
     TIMER.sleep()
     end = time.time()
