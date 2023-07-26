@@ -2,14 +2,16 @@ import os
 import platform
 import subprocess
 import time
-
+from bs4 import BeautifulSoup
 import fpstimer
 import grequests
 import requests
 import rich
 import spotipy
+import sys
 from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
+import linecache
 
 load_dotenv()
 API_TOKEN = os.environ.get("DISCORD_AUTH")  # https://discordhelp.net/discord-token
@@ -46,6 +48,14 @@ class StatusScreen:  # working on, currently dead code
             self.console.print(text)
             last_line = text
 
+def PrintException():
+    exc_type, exc_obj, tb = sys.exc_info()
+    f = tb.tb_frame
+    lineno = tb.tb_lineno
+    filename = f.f_code.co_filename
+    linecache.checkcache(filename)
+    line = linecache.getline(filename, lineno, f.f_globals)
+    print(f'EXCEPTION IN ({filename}, LINE {lineno} "{line.strip()}"): {exc_obj}')
 
 def grequest_if_different(text, status):
     global last_line
@@ -142,7 +152,7 @@ def status_screen():  # working on, currently dead code
     )
 
 
-def main(last_played_song, last_played_line, song, lyrics):
+def main(last_played_song, last_played_line, song, lyrics, rlyrics):
     start = time.time()
 
     # IF NO SONG IS PLAYING
@@ -164,17 +174,24 @@ def main(last_played_song, last_played_line, song, lyrics):
 
     # IF THERE ARE NO LYRICS
     if lyrics["error"] is True or lyrics["syncType"] == "UNSYNCED":
+        # RESERVE LYRICS
+        if rlyrics is not False:
+            next_line = get_next_line(rlyrics, current_time)
+            last_played_line != next_line
+            grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVE)")
+            last_played_line = next_line
         # If we've already been here (and it's the same song), don't bother changing again, just return.
-        if last_played_line == "NO LYRICS" and song_name == last_played_song:
+        else:
+            if last_played_line == "NO LYRICS" and song_name == last_played_song:
+                TIMER.sleep()
+                return song["item"]["name"], last_played_line
+            grequest_if_different(
+                CUSTOM_STATUS,
+                "DISCORD: NO SYNCED LYRICS",
+            )
+            last_played_line = "NO LYRICS"
             TIMER.sleep()
             return song["item"]["name"], last_played_line
-        grequest_if_different(
-            CUSTOM_STATUS,
-            "DISCORD: NO SYNCED LYRICS",
-        )
-        last_played_line = "NO LYRICS"
-        TIMER.sleep()
-        return song["item"]["name"], last_played_line
 
     # IF THERE ARE LYRICS
     else:
@@ -196,7 +213,7 @@ def main(last_played_song, last_played_line, song, lyrics):
 def get_next_line(lyrics, current_time):
     min_time = 100000000
     next_line = ""
-    for line in lyrics["lines"]:
+    for line in lyrics["lines"]:      
         milliseconds_past_line = current_time - int(line["startTimeMs"])
         if milliseconds_past_line < min_time and milliseconds_past_line > 0:
             min_time = milliseconds_past_line
@@ -208,8 +225,10 @@ def on_new_song(sp):
     print("SPOTIFY: LISTENING REQUEST MADE")
     current_song = sp.current_user_playing_track()
     track_id = current_song["item"]["uri"].split(":")[-1]
+    isrc = current_song["item"]["external_ids"]["isrc"]
     current_lyrics = get_lyrics(track_id)
-    return current_song, current_lyrics
+    reserve_lyrics = get_reserve_lyrics(isrc)
+    return current_song, current_lyrics, reserve_lyrics
 
 
 def get_lyrics(track_id):
@@ -217,7 +236,48 @@ def get_lyrics(track_id):
         f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
     ).json()
 
+def get_reserve_lyrics(isrc):
+    r = requests.get(
+            f'https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}', timeout=10
+        )
+    if(r.status_code != 200):
+        return False
+    try:
+        rjson=r.json()
+    except:
+        return False
+    html=BeautifulSoup(rjson["Content"],'html.parser')
+    data={"error":False,"syncType":"LINE_SYNCED","lines":[]}
+    lines=html.find_all("p")
+    try:
+        for l in lines:
+            line=BeautifulSoup(str(l), 'html.parser')
+            if line.p.has_attr('begin'):
+                time=line.p['begin']
+                if ':' in time:
+                    time = time.split(':')
+                    if len(time) == 2:
+                        mins = int(time[0])
+                        seconds = mins*60+float(time[1])
+                        ms = round(seconds*1000)
+                    if len(time) == 3:
+                        hours = int(time[0])
+                        mins = int(time[1])
+                        seconds = hours*60*24+mins*60+float(time[2])
+                        ms = round(seconds*1000)
+                else:
+                    seconds = float(time)
+                    ms = round(seconds*1000)
+                linedata={"startTimeMs":f"{ms}","words":f"{line.p.text}","syllables":[],"endTimeMs":"0"}
+                data["lines"].append(linedata)
+    except:
+        PrintException()
+    if len(data['lines']) == 0:
+        return False
+    return data
 
+        
+    return r
 def get_spotipy():
     print("SPOTIFY: RETRIVING/REFRESHING TOKEN")
     auth = SpotifyOAuth(SPOTIFY_ID, SPOTIFY_SECRET, SPOTIFY_REDIRECT, scope=SCOPE)
@@ -240,11 +300,11 @@ if __name__ == "__main__":
                 main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC)
                 == 0
             ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
-                song, lyrics = on_new_song(sp)
+                song, lyrics, rlyrics = on_new_song(sp)
                 if song["is_playing"] is False:
                     song = None
             last_played_song, last_played_line = main(
-                song_last_played, line_last_played, song, lyrics
+                song_last_played, line_last_played, song, lyrics, rlyrics
             )
             main_loops += 1
         except Exception as e:
