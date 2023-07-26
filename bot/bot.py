@@ -213,7 +213,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
 def get_next_line(lyrics, current_time):
     min_time = 100000000
     next_line = ""
-    for line in lyrics["lines"]:        
+    for line in lyrics["lines"]:      
         milliseconds_past_line = current_time - int(line["startTimeMs"])
         if milliseconds_past_line < min_time and milliseconds_past_line > 0:
             min_time = milliseconds_past_line
@@ -256,9 +256,15 @@ def get_reserve_lyrics(isrc):
                 time=line.p['begin']
                 if ':' in time:
                     time = time.split(':')
-                    mins = int(time[0])
-                    seconds = mins*60+float(time[1])
-                    ms = round(seconds*1000)
+                    if len(time) == 2:
+                        mins = int(time[0])
+                        seconds = mins*60+float(time[1])
+                        ms = round(seconds*1000)
+                    if len(time) == 3:
+                        hours = int(time[0])
+                        mins = int(time[1])
+                        seconds = hours*60*24+mins*60+float(time[2])
+                        ms = round(seconds*1000)
                 else:
                     seconds = float(time)
                     ms = round(seconds*1000)
