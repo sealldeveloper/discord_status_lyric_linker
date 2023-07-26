@@ -57,7 +57,7 @@ def PrintException():
     filename = f.f_code.co_filename
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
-    print(f'EXCEPTION IN ({filename}, LINE {lineno} "{line.strip()}"): {exc_obj}')
+    print(f"EXCEPTION IN ({filename}, LINE {lineno} \"{line.strip()}\"): {exc_obj}")
 
 
 def grequest_if_different(text, status):
@@ -179,7 +179,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
     # IF THERE ARE NO LYRICS
     if lyrics["error"] is True or lyrics["syncType"] == "UNSYNCED":
         # RESERVE LYRICS
-        if rlyrics is not False and 'lines' in rlyrics:
+        if rlyrics is not False and "lines" in rlyrics:
             next_line = get_next_line(rlyrics, current_time, song_length)
             if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
                 grequest_if_different("", "")
@@ -222,26 +222,25 @@ def get_next_line(lyrics, current_time, song_length):
     try:
         min_time = 100000000
         next_line = ""
-        if 'lines' in lyrics.keys():
+        if "lines" in lyrics.keys():
             for line in lyrics["lines"]:
                     milliseconds_past_line = current_time - round(float(line["startTimeMs"]))
                     if milliseconds_past_line < min_time and milliseconds_past_line > 0:
                         min_time = milliseconds_past_line
                         next_line = line["words"]
-            first_lyric=round(float(lyrics["lines"][0]['startTimeMs']))
+            first_lyric=round(float(lyrics["lines"][0]["startTimeMs"]))
             if current_time <= first_lyric:
                 next_line = "♪"
-            if 'endTimeMs' in lyrics["lines"][len(lyrics)-1].keys():
-                last_lyric=round(float(lyrics["lines"][len(lyrics)-1]['endTimeMs']))
-                print(last_lyric,current_time)
+            if "endTimeMs" in lyrics["lines"][len(lyrics)-1].keys():
+                last_lyric=round(float(lyrics["lines"][len(lyrics)-1]["endTimeMs"]))
                 if last_lyric != 0.0 and current_time > last_lyric:
                     next_line = "♪"
         return next_line
-    except:
+    except Exception:
         PrintException()
 
 
-def on_new_song(sp,last_played):
+def on_new_song(sp, last_played):
     print("SPOTIFY: LISTENING REQUEST MADE")
     current_song = sp.current_user_playing_track()
     if current_song is not None:
@@ -251,7 +250,7 @@ def on_new_song(sp,last_played):
             track_id = current_song["item"]["uri"].split(":")[-1]
             current_lyrics = get_lyrics(track_id)
             reserve_lyrics = get_reserve_lyrics(isrc)
-            return current_song, reserve_lyrics, current_lyrics, isrc
+            return current_song, current_lyrics, reserve_lyrics, isrc
         else:
             return current_song, False, False, isrc
     else:
@@ -264,36 +263,38 @@ def get_lyrics(track_id):
         f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
     ).json()
 
+
 def get_reserve_lyrics(isrc):
     r = requests.get(
-            f'https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}', timeout=10
+            f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
         )
     if(r.status_code != 200):
         return False
     try:
         rjson=r.json()
-    except:
+    except Exception:
         return False
-    html=BeautifulSoup(rjson["Content"],'html.parser')
+    html=BeautifulSoup(rjson["Content"],"html.parser")
     data={"error":False,"syncType":"LINE_SYNCED","lines":[]}
     lines=html.find_all("p")
     try:
         for l in lines:
-            line=BeautifulSoup(str(l), 'html.parser')
-            if line.p.has_attr('begin'):
-                begin=timestamp_to_ms(line.p['begin'])
-                end=timestamp_to_ms(line.p['end'])
+            line=BeautifulSoup(str(l), "html.parser")
+            if line.p.has_attr("begin"):
+                begin=timestamp_to_ms(line.p["begin"])
+                end=timestamp_to_ms(line.p["end"])
                 linedata={"startTimeMs":f"{begin}","words":f"{line.p.text}","syllables":[],"endTimeMs":f"{end}"}
                 data["lines"].append(linedata)
-    except:
+    except Exception:
         PrintException()
-    if len(data['lines']) == 0:
+    if len(data["lines"]) == 0:
         return False
     return data
 
+
 def timestamp_to_ms(time):
-    if ':' in time:
-        time = time.split(':')
+    if ":" in time:
+        time = time.split(":")
         if len(time) == 2:
             mins = int(time[0])
             seconds = mins*60+float(time[1])
@@ -307,6 +308,8 @@ def timestamp_to_ms(time):
     else:
         seconds = float(time)
         ms = round(seconds*1000)
+
+
 def get_spotipy():
     print("SPOTIFY: RETRIVING/REFRESHING TOKEN")
     auth = SpotifyOAuth(SPOTIFY_ID, SPOTIFY_SECRET, SPOTIFY_REDIRECT, scope=SCOPE)
@@ -342,7 +345,7 @@ if __name__ == "__main__":
                     lyrics=l
                 if rl is not False:
                     rlyrics=rl
-                if 'is_playing' in song.keys():
+                if type(song) != bool:
                     if song["is_playing"] is False:
                         song = None
                         grequest_if_different(
