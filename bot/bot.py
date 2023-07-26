@@ -168,7 +168,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
         return "", "NO SONG"
 
     current_time = song["progress_ms"]
-    song_name = song["item"]["name"]
+    song_name = song["item"]["external_ids"]["isrc"]
     # artist_name = song["item"]["artists"][0]["name"]
     # formatted_currently_playing = f"{song_name} -- {artist_name}"
 
@@ -184,14 +184,14 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
         else:
             if last_played_line == "NO LYRICS" and song_name == last_played_song:
                 TIMER.sleep()
-                return song["item"]["name"], last_played_line
+                return song_name, last_played_line
             grequest_if_different(
                 CUSTOM_STATUS,
                 "DISCORD: NO SYNCED LYRICS",
             )
             last_played_line = "NO LYRICS"
             TIMER.sleep()
-            return song["item"]["name"], last_played_line
+            return song_game, last_played_line
 
     # IF THERE ARE LYRICS
     else:
@@ -207,7 +207,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
     end = time.time()
     milliseconds = (end - start) * 1000
     song["progress_ms"] += milliseconds
-    return song["item"]["name"], last_played_line
+    return song_name, last_played_line
 
 
 def get_next_line(lyrics, current_time):
@@ -221,14 +221,17 @@ def get_next_line(lyrics, current_time):
     return next_line
 
 
-def on_new_song(sp):
+def on_new_song(sp,last_played):
     print("SPOTIFY: LISTENING REQUEST MADE")
     current_song = sp.current_user_playing_track()
-    track_id = current_song["item"]["uri"].split(":")[-1]
     isrc = current_song["item"]["external_ids"]["isrc"]
-    current_lyrics = get_lyrics(track_id)
-    reserve_lyrics = get_reserve_lyrics(isrc)
-    return current_song, current_lyrics, reserve_lyrics
+    if isrc == last_played or last_played == "":
+        track_id = current_song["item"]["uri"].split(":")[-1]
+        current_lyrics = get_lyrics(track_id)
+        reserve_lyrics = get_reserve_lyrics(isrc)
+        return current_song, current_lyrics, reserve_lyrics
+    else:
+        return current_song, False, False
 
 
 def get_lyrics(track_id):
@@ -253,22 +256,9 @@ def get_reserve_lyrics(isrc):
         for l in lines:
             line=BeautifulSoup(str(l), 'html.parser')
             if line.p.has_attr('begin'):
-                time=line.p['begin']
-                if ':' in time:
-                    time = time.split(':')
-                    if len(time) == 2:
-                        mins = int(time[0])
-                        seconds = mins*60+float(time[1])
-                        ms = round(seconds*1000)
-                    if len(time) == 3:
-                        hours = int(time[0])
-                        mins = int(time[1])
-                        seconds = hours*60*24+mins*60+float(time[2])
-                        ms = round(seconds*1000)
-                else:
-                    seconds = float(time)
-                    ms = round(seconds*1000)
-                linedata={"startTimeMs":f"{ms}","words":f"{line.p.text}","syllables":[],"endTimeMs":"0"}
+                begin=timestamp_to_ms(line.p['begin'])
+                end=timestamp_to_ms(line.p['end'])
+                linedata={"startTimeMs":f"{begin}","words":f"{line.p.text}","syllables":[],"endTimeMs":f"{end}"}
                 data["lines"].append(linedata)
     except:
         PrintException()
@@ -276,8 +266,22 @@ def get_reserve_lyrics(isrc):
         return False
     return data
 
-        
-    return r
+def timestamp_to_ms(time):
+    if ':' in time:
+        time = time.split(':')
+        if len(time) == 2:
+            mins = int(time[0])
+            seconds = mins*60+float(time[1])
+            ms = round(seconds*1000)
+        if len(time) == 3:
+            hours = int(time[0])
+            mins = int(time[1])
+            seconds = hours*60*24+mins*60+float(time[2])
+            ms = round(seconds*1000)
+        return ms
+    else:
+        seconds = float(time)
+        ms = round(seconds*1000)
 def get_spotipy():
     print("SPOTIFY: RETRIVING/REFRESHING TOKEN")
     auth = SpotifyOAuth(SPOTIFY_ID, SPOTIFY_SECRET, SPOTIFY_REDIRECT, scope=SCOPE)
@@ -292,6 +296,8 @@ def get_spotipy():
 if __name__ == "__main__":
     song_last_played = ""
     line_last_played = ""
+    lyrics = {}
+    rlyrics = {}
     main_loops = 0
     sp, auth = get_spotipy()
     while True:
@@ -300,9 +306,18 @@ if __name__ == "__main__":
                 main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC)
                 == 0
             ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
-                song, lyrics, rlyrics = on_new_song(sp)
+                song, l, rl = on_new_song(sp, song_last_played)
                 if song["is_playing"] is False:
                     song = None
+                    grequest_if_different(
+                    CUSTOM_STATUS,
+                    "SPOTIFY: CURRENTLY PAUSED",
+                    )
+                    last_played_line = "NO LYRICS"
+                if l is not False:
+                    lyrics=l
+                if rl is not False:
+                    rlyrics=rl
             last_played_song, last_played_line = main(
                 song_last_played, line_last_played, song, lyrics, rlyrics
             )
