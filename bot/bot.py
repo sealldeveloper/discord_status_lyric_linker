@@ -179,7 +179,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
     # IF THERE ARE NO LYRICS
     if lyrics["error"] is True or lyrics["syncType"] == "UNSYNCED":
         # RESERVE LYRICS
-        if rlyrics is not False and "lines" in rlyrics:
+        if rlyrics is not False and "lines" in rlyrics and rlyrics["error"] is False:
             next_line = get_next_line(rlyrics, current_time, song_length)
             if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
                 grequest_if_different("", "")
@@ -269,13 +269,13 @@ def get_reserve_lyrics(isrc):
             f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
         )
     if(r.status_code != 200):
-        return False
+        return {"error":True,"syncType":"UNSYNCED"}
     try:
         rjson=r.json()
     except Exception:
-        return False
+        return {"error":True,"syncType":"UNSYNCED"}
     html=BeautifulSoup(rjson["Content"],"html.parser")
-    data={"error":False,"syncType":"LINE_SYNCED","lines":[]}
+    data={"error":False,"syncType":"LINE_SYNCED", "lines":[]}
     lines=html.find_all("p")
     try:
         for l in lines:
@@ -288,7 +288,7 @@ def get_reserve_lyrics(isrc):
     except Exception:
         PrintException()
     if len(data["lines"]) == 0:
-        return False
+        return {"error":True,"syncType":"UNSYNCED"}
     return data
 
 
@@ -360,5 +360,3 @@ if __name__ == "__main__":
             main_loops += 1
         except Exception as e:
             PrintException()
-            print(e)
-            sp, auth = get_spotipy()
