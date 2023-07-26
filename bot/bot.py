@@ -360,3 +360,5 @@ if __name__ == "__main__":
             main_loops += 1
         except Exception as e:
             PrintException()
+            print(e)
+            sp, auth = get_spotipy()
