@@ -223,18 +223,18 @@ def get_next_line(lyrics, current_time, song_length):
         min_time = 100000000
         next_line = ""
         if "lines" in lyrics.keys():
-            for line in lyrics["lines"]:
-                    milliseconds_past_line = current_time - round(float(line["startTimeMs"]))
-                    if milliseconds_past_line < min_time and milliseconds_past_line > 0:
-                        min_time = milliseconds_past_line
-                        next_line = line["words"]
-            first_lyric=round(float(lyrics["lines"][0]["startTimeMs"]))
-            if current_time <= first_lyric:
-                next_line = "♪"
-            if "endTimeMs" in lyrics["lines"][len(lyrics)-1].keys():
-                last_lyric=round(float(lyrics["lines"][len(lyrics)-1]["endTimeMs"]))
+            if "endTimeMs" in lyrics["lines"][len(lyrics["lines"])-1].keys():
+                last_lyric=round(float(lyrics["lines"][len(lyrics["lines"])-1]["endTimeMs"]))
                 if last_lyric != 0.0 and current_time > last_lyric:
                     next_line = "♪"
+            first_lyric=round(float(lyrics["lines"][0]['startTimeMs']))
+            if current_time <= first_lyric:
+                next_line = "♪"
+            for line in lyrics["lines"]:
+                milliseconds_past_line = current_time - round(float(line["startTimeMs"]))
+                if milliseconds_past_line < min_time and milliseconds_past_line > 0:
+                    min_time = milliseconds_past_line
+                    next_line = line["words"]
         return next_line
     except Exception:
         PrintException()
@@ -308,6 +308,7 @@ def timestamp_to_ms(time):
     else:
         seconds = float(time)
         ms = round(seconds*1000)
+        return ms
 
 
 def get_spotipy():
@@ -361,4 +362,3 @@ if __name__ == "__main__":
             PrintException()
             print(e)
             sp, auth = get_spotipy()
-            time.sleep(3)
