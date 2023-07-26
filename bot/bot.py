@@ -1,17 +1,18 @@
+import linecache
 import os
 import platform
 import subprocess
+import sys
 import time
-from bs4 import BeautifulSoup
+
 import fpstimer
 import grequests
 import requests
 import rich
 import spotipy
-import sys
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
-import linecache
 
 load_dotenv()
 API_TOKEN = os.environ.get("DISCORD_AUTH")  # https://discordhelp.net/discord-token
@@ -48,6 +49,7 @@ class StatusScreen:  # working on, currently dead code
             self.console.print(text)
             last_line = text
 
+
 def PrintException():
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
@@ -56,6 +58,7 @@ def PrintException():
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
     print(f'EXCEPTION IN ({filename}, LINE {lineno} "{line.strip()}"): {exc_obj}')
+
 
 def grequest_if_different(text, status):
     global last_line
@@ -177,7 +180,6 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
         # RESERVE LYRICS
         if rlyrics is not False:
             next_line = get_next_line(rlyrics, current_time)
-            last_played_line != next_line
             grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVE)")
             last_played_line = next_line
         # If we've already been here (and it's the same song), don't bother changing again, just return.
@@ -191,13 +193,13 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
             )
             last_played_line = "NO LYRICS"
             TIMER.sleep()
-            return song_game, last_played_line
+            return song_name, last_played_line
 
     # IF THERE ARE LYRICS
     else:
         next_line = get_next_line(lyrics, current_time)
         if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            grequest_if_different("", "")
+            grequest_if_different(CUSTOM_STATUS, "")
         elif (
             last_played_line != next_line
         ):  # no need to update if the line hasn't changed.
@@ -213,7 +215,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
 def get_next_line(lyrics, current_time):
     min_time = 100000000
     next_line = ""
-    for line in lyrics["lines"]:      
+    for line in lyrics["lines"]:
         milliseconds_past_line = current_time - int(line["startTimeMs"])
         if milliseconds_past_line < min_time and milliseconds_past_line > 0:
             min_time = milliseconds_past_line
@@ -221,17 +223,16 @@ def get_next_line(lyrics, current_time):
     return next_line
 
 
-def on_new_song(sp,last_played):
+def on_new_song(sp, last_played):
     print("SPOTIFY: LISTENING REQUEST MADE")
     current_song = sp.current_user_playing_track()
     isrc = current_song["item"]["external_ids"]["isrc"]
-    if isrc == last_played or last_played == "":
-        track_id = current_song["item"]["uri"].split(":")[-1]
-        current_lyrics = get_lyrics(track_id)
-        reserve_lyrics = get_reserve_lyrics(isrc)
-        return current_song, current_lyrics, reserve_lyrics
-    else:
+    if isrc != last_played != "":
         return current_song, False, False
+    track_id = current_song["item"]["uri"].split(":")[-1]
+    current_lyrics = get_lyrics(track_id)
+    reserve_lyrics = get_reserve_lyrics(isrc)
+    return current_song, current_lyrics, reserve_lyrics
 
 
 def get_lyrics(track_id):
@@ -239,49 +240,56 @@ def get_lyrics(track_id):
         f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
     ).json()
 
+
 def get_reserve_lyrics(isrc):
     r = requests.get(
-            f'https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}', timeout=10
-        )
-    if(r.status_code != 200):
+        f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
+    )
+    if r.status_code != 200:
         return False
     try:
-        rjson=r.json()
-    except:
+        rjson = r.json()
+    except Exception:
         return False
-    html=BeautifulSoup(rjson["Content"],'html.parser')
-    data={"error":False,"syncType":"LINE_SYNCED","lines":[]}
-    lines=html.find_all("p")
+    html = BeautifulSoup(rjson["Content"], "html.parser")
+    data = {"error": False, "syncType": "LINE_SYNCED", "lines": []}
+    lines = html.find_all("p")
     try:
-        for l in lines:
-            line=BeautifulSoup(str(l), 'html.parser')
-            if line.p.has_attr('begin'):
-                begin=timestamp_to_ms(line.p['begin'])
-                end=timestamp_to_ms(line.p['end'])
-                linedata={"startTimeMs":f"{begin}","words":f"{line.p.text}","syllables":[],"endTimeMs":f"{end}"}
+        for word in lines:
+            line = BeautifulSoup(str(word), "html.parser")
+            if line.p.has_attr("begin"):
+                begin = timestamp_to_ms(line.p["begin"])
+                end = timestamp_to_ms(line.p["end"])
+                linedata = {
+                    "startTimeMs": f"{begin}",
+                    "words": f"{line.p.text}",
+                    "syllables": [],
+                    "endTimeMs": f"{end}",
+                }
                 data["lines"].append(linedata)
-    except:
+    except Exception:
         PrintException()
-    if len(data['lines']) == 0:
-        return False
-    return data
+    return False if len(data["lines"]) == 0 else data
+
 
 def timestamp_to_ms(time):
-    if ':' in time:
-        time = time.split(':')
+    if ":" in time:
+        time = time.split(":")
         if len(time) == 2:
             mins = int(time[0])
-            seconds = mins*60+float(time[1])
-            ms = round(seconds*1000)
+            seconds = mins * 60 + float(time[1])
+            ms = round(seconds * 1000)
         if len(time) == 3:
             hours = int(time[0])
             mins = int(time[1])
-            seconds = hours*60*24+mins*60+float(time[2])
-            ms = round(seconds*1000)
+            seconds = hours * 60 * 24 + mins * 60 + float(time[2])
+            ms = round(seconds * 1000)
         return ms
     else:
         seconds = float(time)
-        ms = round(seconds*1000)
+        ms = round(seconds * 1000)
+
+
 def get_spotipy():
     print("SPOTIFY: RETRIVING/REFRESHING TOKEN")
     auth = SpotifyOAuth(SPOTIFY_ID, SPOTIFY_SECRET, SPOTIFY_REDIRECT, scope=SCOPE)
@@ -306,23 +314,23 @@ if __name__ == "__main__":
                 main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC)
                 == 0
             ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
-                song, l, rl = on_new_song(sp, song_last_played)
+                song, lyrics_status, rlyrics_status = on_new_song(sp, song_last_played)
                 if song["is_playing"] is False:
                     song = None
                     grequest_if_different(
-                    CUSTOM_STATUS,
-                    "SPOTIFY: CURRENTLY PAUSED",
+                        CUSTOM_STATUS,
+                        "SPOTIFY: CURRENTLY PAUSED",
                     )
                     last_played_line = "NO LYRICS"
-                if l is not False:
-                    lyrics=l
-                if rl is not False:
-                    rlyrics=rl
+                if lyrics_status is not False:
+                    lyrics = lyrics_status
+                if rlyrics_status is not False:
+                    rlyrics = rlyrics_status
             last_played_song, last_played_line = main(
                 song_last_played, line_last_played, song, lyrics, rlyrics
             )
             main_loops += 1
         except Exception as e:
-            print(str(e))
+            print(e)
             sp, auth = get_spotipy()
             time.sleep(3)
