@@ -53,6 +53,7 @@ def checkvenv():
             "python_dotenv",
             "gevent",
             "rich",
+            "bs4",
         ],
         check=True,
     )
