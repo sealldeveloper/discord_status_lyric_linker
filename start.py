@@ -140,13 +140,13 @@ def get_credentials():
                 "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
                 "Emoji ID is required for custom emojis."
             )
-            status_emoji_name = input("Enter emoji name for status: ")
+            status_emoji_name = input("Enter emoji name for status (do not include the ':' on either side): ")
             status_emoji_id = input("Enter emoji ID for status: ")
             print(
                 "This is the emoji that will be used for the status WHEN IDLE. (If you want the same always just enter the same values as before.)\nKeep empty for none and to enable ♪\n"
                 "Emoji ID is required for custom emojis."
             )
-            status_emoji_idle_name = input("Enter emoji name for idle status: ")
+            status_emoji_idle_name = input("Enter emoji name for idle status (do not include the ':' on either side): ")
             status_emoji_idle_id = input("Enter emoji ID for idle status: ")
     else:
         nitro = False
