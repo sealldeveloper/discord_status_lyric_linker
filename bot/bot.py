@@ -25,7 +25,8 @@ NITRO = os.environ.get("NITRO")
 if NITRO == "TRUE":
     CUSTOM_STATUS_EMOJI_NAME = os.environ.get("STATUS_EMOJI_NAME")
     CUSTOM_STATUS_EMOJI_ID = os.environ.get("STATUS_EMOJI_ID")
-
+    CUSTOM_STATUS_EMOJI_IDLE_NAME = os.environ.get("STATUS_EMOJI_IDLE_NAME")
+    CUSTOM_STATUS_EMOJI_IDLE_ID = os.environ.get("STATUS_EMOJI_IDLE_ID")
 else:
     CUSTOM_STATUS_EMOJI_NAME = os.environ.get("STATUS_EMOJI_NAME")
 
@@ -60,77 +61,61 @@ def PrintException():
     print(f"EXCEPTION IN ({filename}, LINE {lineno} \"{line.strip()}\"): {exc_obj}")
 
 
-def grequest_if_different(text, status):
+def grequest_if_different(text, status, paused):
     global last_line
     if text != last_line:
         print(status)
-        send_grequest(text)
+        send_grequest(text, paused)
         last_line = text
 
 
-def request_if_different(text, status):
+def request_if_different(text, status, paused):
     global last_line
     if text != last_line:
         print(status)
-        send_request(text)
+        send_request(text, paused)
         last_line = text
 
 
-def send_grequest(text):
+def send_grequest(text, paused):
+    jsondata={
+        "custom_status": {
+            "text": text,
+            "emoji_name": CUSTOM_STATUS_EMOJI_NAME,
+        }
+    }
     if NITRO == "TRUE":
-        req = grequests.patch(
-            url="https://discord.com/api/v6/users/@me/settings",
-            headers={"authorization": API_TOKEN},
-            json={
-                "custom_status": {
-                    "text": text,
-                    "emoji_name": CUSTOM_STATUS_EMOJI_NAME,
-                    "emoji_id": CUSTOM_STATUS_EMOJI_ID,
-                }
-            },
-            timeout=10,
-        )
-    else:
-        req = grequests.patch(
-            url="https://discord.com/api/v6/users/@me/settings",
-            headers={"authorization": API_TOKEN},
-            json={
-                "custom_status": {
-                    "text": text,
-                    "emoji_name": CUSTOM_STATUS_EMOJI_NAME,
-                }
-            },
-            timeout=10,
-        )
+        jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_ID
+        if paused == True:
+            jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_IDLE_ID
+            jsondata["custom_status"]["emoji_name"] = CUSTOM_STATUS_EMOJI_IDLE_NAME
+    req = grequests.patch(
+        url="https://discord.com/api/v6/users/@me/settings",
+        headers={"authorization": API_TOKEN},
+        json=jsondata,
+        timeout=10,
+    )
     grequests.send(req, grequests.Pool(1))
 
 
-def send_request(self, text):
+def send_request(text, paused):
+    jsondata={
+        "custom_status": {
+            "text": text,
+            "emoji_name": CUSTOM_STATUS_EMOJI_NAME,
+        }
+    }
     if NITRO == "TRUE":
-        requests.patch(
-            url="https://discord.com/api/v6/users/@me/settings",
-            headers={"authorization": API_TOKEN},
-            json={
-                "custom_status": {
-                    "text": text,
-                    "emoji_name": CUSTOM_STATUS_EMOJI_NAME,
-                    "emoji_id": CUSTOM_STATUS_EMOJI_ID,
-                }
-            },
-            timeout=10,
-        )
-    else:
-        requests.patch(
-            url="https://discord.com/api/v6/users/@me/settings",
-            headers={"authorization": API_TOKEN},
-            json={
-                "custom_status": {
-                    "text": text,
-                    "emoji_name": CUSTOM_STATUS_EMOJI_NAME,
-                }
-            },
-            timeout=10,
-        )
+        jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_ID
+        if paused == True:
+            jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_IDLE_ID
+            jsondata["custom_status"]["emoji_name"] = CUSTOM_STATUS_EMOJI_IDLE_NAME
+    requests.patch(
+        url="https://discord.com/api/v6/users/@me/settings",
+        headers={"authorization": API_TOKEN},
+        json=jsondata,
+        timeout=10,
+    )
 
 
 def clear():  # working on, currently dead code
@@ -166,6 +151,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
         request_if_different(
             CUSTOM_STATUS,
             "DISCORD: NOT CURRENTLY LISTENING UPDATE",
+            True
         )
         TIMER.sleep()
         return "", "NO SONG"
@@ -182,20 +168,24 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
         if rlyrics is not False and "lines" in rlyrics and rlyrics["error"] is False:
             next_line = get_next_line(rlyrics, current_time, song_length)
             if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-                grequest_if_different("", "")
+                grequest_if_different("", "", False)
             elif (
                 last_played_line != next_line
             ):  # no need to update if the line hasn't changed.
-                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVE)")
+                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVE)", False)
                 last_played_line = next_line
         # If we've already been here (and it's the same song), don't bother changing again, just return.
         else:
             if last_played_line == "NO LYRICS" and song_name == last_played_song:
                 TIMER.sleep()
                 return song_name, last_played_line
+            elif last_played_line == "PAUSED OR NOT PLAYING" and song_name == last_played_song:
+                TIMER.sleep()
+                return song_name, last_played_line
             grequest_if_different(
                 CUSTOM_STATUS,
                 "DISCORD: NO SYNCED LYRICS",
+                False
             )
             last_played_line = "NO LYRICS"
             TIMER.sleep()
@@ -205,11 +195,11 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
     else:
         next_line = get_next_line(lyrics, current_time, song_length)
         if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            grequest_if_different("", "")
+            grequest_if_different("", "", False)
         elif (
             last_played_line != next_line
         ):  # no need to update if the line hasn't changed.
-            grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE")
+            grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE", False)
             last_played_line = next_line
     TIMER.sleep()
     end = time.time()
@@ -340,8 +330,9 @@ if __name__ == "__main__":
                     grequest_if_different(
                     CUSTOM_STATUS,
                     "SPOTIFY: NOTHING PLAYING",
+                    True
                     )
-                    last_played_line = "NO LYRICS"
+                    last_played_line = "PAUSED OR NOT PLAYING"
                 if l is not False:
                     lyrics=l
                 if rl is not False:
@@ -352,8 +343,9 @@ if __name__ == "__main__":
                         grequest_if_different(
                         CUSTOM_STATUS,
                         "SPOTIFY: CURRENTLY PAUSED",
+                        True
                         )
-                        last_played_line = "NO LYRICS"
+                        last_played_line = "PAUSED OR NOT PLAYING"
             song_last_played, last_played_line = main(
                 isrc, line_last_played, song, lyrics, rlyrics
             )

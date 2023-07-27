@@ -93,12 +93,14 @@ def create_env_file(creds: list):
         file.write(f"SPOTIFY_SECRET = {creds[2]}\n")
         file.write(f"SPOTIFY_REDIRECT = {creds[3]}\n")
         file.write(f"STATUS = {creds[4]}\n")
-        if creds[7] is False:
+        if creds[9] is False:
             file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
             file.write("NITRO = FALSE\n")
         else:
             file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
             file.write(f"STATUS_EMOJI_ID = {creds[6]}\n")
+            file.write(f"STATUS_EMOJI_IDLE_NAME = {creds[7]}\n")
+            file.write(f"STATUS_EMOJI_IDLE_ID = {creds[8]}\n")
             file.write("NITRO = TRUE\n")
 
 
@@ -140,6 +142,12 @@ def get_credentials():
             )
             status_emoji_name = input("Enter emoji name for status: ")
             status_emoji_id = input("Enter emoji ID for status: ")
+            print(
+                "This is the emoji that will be used for the status WHEN IDLE. (If you want the same always just enter the same values as before.)\nKeep empty for none and to enable ♪\n"
+                "Emoji ID is required for custom emojis."
+            )
+            status_emoji_idle_name = input("Enter emoji name for idle status: ")
+            status_emoji_idle_id = input("Enter emoji ID for idle status: ")
     else:
         nitro = False
         status_emoji_name = ""
@@ -153,6 +161,8 @@ def get_credentials():
         custom_status,
         status_emoji_name,
         status_emoji_id,
+        status_emoji_idle_name,
+        status_emoji_idle_id,
         nitro,
     ]
 
