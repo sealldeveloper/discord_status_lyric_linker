@@ -21,6 +21,7 @@ SPOTIFY_ID = os.environ.get("SPOTIFY_ID")
 SPOTIFY_SECRET = os.environ.get("SPOTIFY_SECRET")
 SPOTIFY_REDIRECT = os.environ.get("SPOTIFY_REDIRECT")
 CUSTOM_STATUS = os.environ.get("STATUS")
+LOCALLY_STORED = os.environ.get("LOCALLY_STORED")
 NITRO = os.environ.get("NITRO")
 
 if NITRO == "TRUE":
@@ -247,36 +248,40 @@ def on_new_song(sp, last_played):
         return False, False, False, False
 
 
-
-def get_lyrics(track_id):
-    path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{track_id}-spotify.json'
+def local_check(path, v):
     if os.path.isfile(path):
-        print("FOUND LYRICS LOCALLY (SPOTIFY)")
+        print(f"FOUND LYRICS LOCALLY ({v})")
         with open(path, 'r') as f:
             return json.load(f)
+
+
+def get_lyrics(track_id):
+    if LOCALLY_STORED == "TRUE":
+        path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{track_id}-spotify.json'
+        return local_check(path, 'SPOTIFY')
     print("FETCHING LYRICS, NEW SONG (SPOTIFY)")
-    with open(path, 'w') as f:
-        data = requests.get(
-            f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
-        ).json()
-        json.dump(data, f)
+    data = requests.get(
+                f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
+            ).json()
+    if LOCALLY_STORED == "TRUE":
+        with open(path, 'w') as f:
+            json.dump(data, f)
     return data
 
 
 def get_reserve_lyrics(isrc):
-    path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{isrc}-apple-music.json'
-    if os.path.isfile(path):
-        print("FOUND LYRICS LOCALLY (RESERVED / APPLE MUSIC)")
-        with open(path, 'r') as f:
-            return json.load(f)
+    if LOCALLY_STORED == "TRUE":
+        path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{isrc}-apple-music.json'
+        return local_check(path, 'RESERVED / APPLE MUSIC')
     print("FETCHING LYRICS, NEW SONG (RESERVED / APPLE MUSIC)")
     r = requests.get(
             f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
         )
     if(r.status_code != 200):
         data={"error":True,"syncType":"UNSYNCED"}
-        with open(path, 'w') as f:
-            json.dump(data, f)
+        if LOCALLY_STORED == "TRUE":
+            with open(path, 'w') as f:
+                json.dump(data, f)
         return data
     try:
         rjson=r.json()
@@ -297,11 +302,13 @@ def get_reserve_lyrics(isrc):
         PrintException()
     if len(data["lines"]) == 0:
         data={"error":True,"syncType":"UNSYNCED"}
-        with open(path, 'w') as f:
-            json.dump(data, f)
+        if LOCALLY_STORED == "TRUE":
+            with open(path, 'w') as f:
+                json.dump(data, f)
         return data
-    with open(path, 'w') as f:
-        json.dump(data, f)
+    if LOCALLY_STORED == "TRUE":
+            with open(path, 'w') as f:
+                json.dump(data, f)
     return data
 
 
