@@ -102,6 +102,10 @@ def create_env_file(creds: list):
             file.write(f"STATUS_EMOJI_IDLE_NAME = {creds[7]}\n")
             file.write(f"STATUS_EMOJI_IDLE_ID = {creds[8]}\n")
             file.write("NITRO = TRUE\n")
+        if creds[10] is False:
+            file.write(f"LOCALLY_STORED = FALSE\n")
+        else:
+            file.write(f"LOCALLY_STORED = TRUE\n")
 
 
 def get_credentials():
@@ -152,6 +156,8 @@ def get_credentials():
         nitro = False
         status_emoji_name = ""
         status_emoji_id = ""
+    locally_stored = input("Do you want to store lyrics locally once the song is listened to? This is recommended for speed and lack of API spamming (stops ratelimiting being so likely) (y/n): ")
+    locally_stored = locally_stored.lower() == "y"
 
     return [
         discord_token,
@@ -164,6 +170,7 @@ def get_credentials():
         status_emoji_idle_name,
         status_emoji_idle_id,
         nitro,
+        locally_stored,
     ]
 
 
