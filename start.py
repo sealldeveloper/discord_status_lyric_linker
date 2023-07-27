@@ -107,6 +107,10 @@ def create_env_file(creds: list):
             file.write(f"LOCALLY_STORED = FALSE\n")
         else:
             file.write(f"LOCALLY_STORED = TRUE\n")
+        if creds[11] is False:
+            file.write(f"SPOTIFY_FIRST = FALSE\n")
+        else:
+            file.write(f"SPOTIFY_FIRST = TRUE\n")
 
 
 def get_credentials():
@@ -162,6 +166,8 @@ def get_credentials():
         status_emoji_id = ""
     locally_stored = input("Do you want to store lyrics locally once the song is listened to? This is recommended for speed and lack of API spamming (stops ratelimiting being so likely) (y/n): ")
     locally_stored = locally_stored.lower() == "y"
+    spotify_first = input("Do you want to use Spotify's lyrics first? (If you select no, it will use Apple Musics lyrics first, and Spotify's secondarily) (y/n): ")
+    spotify_first = spotify_first.lower() == "y"
 
     return [
         discord_token,
@@ -176,6 +182,7 @@ def get_credentials():
         nitro,
         locally_stored,
         custom_idle_status,
+        spotify_first,
     ]
 
 
