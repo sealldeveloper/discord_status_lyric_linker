@@ -93,6 +93,7 @@ def create_env_file(creds: list):
         file.write(f"SPOTIFY_SECRET = {creds[2]}\n")
         file.write(f"SPOTIFY_REDIRECT = {creds[3]}\n")
         file.write(f"STATUS = {creds[4]}\n")
+        file.write(f"STATUS_IDLE = {creds[11]}\n")
         if creds[9] is False:
             file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
             file.write("NITRO = FALSE\n")
@@ -130,6 +131,9 @@ def get_credentials():
         spotify_redirect_uri = "http://localhost/callback"
     custom_status = input(
         "Enter custom status (shows when there is no lyrics/no song is playing): "
+    )
+    custom_idle_status = input(
+        "Enter custom idle status (shows when its paused, or spotify is not being used. If you don't want to utilise this set the same status for this as you did before.): "
     )
     custom_status_emoji = input("Do you want to use custom emoji? (y/n): ")
     if custom_status_emoji.lower() == "y":
@@ -171,6 +175,7 @@ def get_credentials():
         status_emoji_idle_id,
         nitro,
         locally_stored,
+        custom_idle_status,
     ]
 
 
