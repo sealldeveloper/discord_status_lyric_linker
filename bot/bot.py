@@ -24,6 +24,7 @@ CUSTOM_STATUS = os.environ.get("STATUS")
 CUSTOM_IDLE_STATUS = os.environ.get("STATUS_IDLE")
 LOCALLY_STORED = os.environ.get("LOCALLY_STORED")
 NITRO = os.environ.get("NITRO")
+SPOTIFY_FIRST = os.environ.get("SPOTIFY_FIRST")
 
 if NITRO == "TRUE":
     CUSTOM_STATUS_EMOJI_NAME = os.environ.get("STATUS_EMOJI_NAME")
@@ -176,7 +177,10 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
                 elif (
                     last_played_line != next_line
                 ):  # no need to update if the line hasn't changed.
-                    grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVED / APPLE MUSIC)", False)
+                    if SPOTIFY_FIRST == "TRUE":
+                        grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVED / APPLE MUSIC)", False)
+                    elif SPOTIFY_FIRST == "FALSE":
+                        grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVED / SPOTIFY)", False)
                     last_played_line = next_line
             # If we've already been here (and it's the same song), don't bother changing again, just return.
             else:
@@ -203,7 +207,10 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
             elif (
                 last_played_line != next_line
             ):  # no need to update if the line hasn't changed.
-                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE", False)
+                if SPOTIFY_FIRST == "TRUE":
+                    grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (SPOTIFY)", False)
+                elif SPOTIFY_FIRST == "FALSE":
+                    grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (APPLE MUSIC)", False)
                 last_played_line = next_line
         TIMER.sleep()
         end = time.time()
@@ -245,7 +252,9 @@ def on_new_song(sp, last_played):
             track_id = current_song["item"]["uri"].split(":")[-1]
             current_lyrics = get_lyrics(track_id)
             reserve_lyrics = get_reserve_lyrics(isrc)
-            return current_song, current_lyrics, reserve_lyrics, isrc
+            if SPOTIFY_FIRST == "TRUE":
+                return current_song, current_lyrics, reserve_lyrics, isrc
+            return current_song, reserve_lyrics, current_lyrics, isrc
         else:
             return current_song, False, False, isrc
     else:
@@ -262,8 +271,13 @@ def get_lyrics(track_id):
     try:
         path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{track_id}-spotify.json'
         if LOCALLY_STORED == "TRUE" and os.path.isfile(path):
-            return local_check(path, 'SPOTIFY')
-        print("FETCHING LYRICS, NEW SONG (SPOTIFY)")
+            if SPOTIFY_FIRST == "TRUE":
+                return local_check(path, 'SPOTIFY')
+            return local_check(path, "RESERVED / SPOTIFY")
+        if SPOTIFY_FIRST == "TRUE":
+            print("FETCHING LYRICS, NEW SONG (SPOTIFY)")
+        elif SPOTIFY_FIRST == "FALSE":
+            print("FETCHING LYRICS, NEW SONG (RESERVED / SPOTIFY)")
         data = requests.get(
                     f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
                 ).json()
@@ -279,8 +293,13 @@ def get_reserve_lyrics(isrc):
     try:
         path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{isrc}-apple-music.json'
         if LOCALLY_STORED == "TRUE" and os.path.isfile(path):
-            return local_check(path, 'RESERVED / APPLE MUSIC')
-        print("FETCHING LYRICS, NEW SONG (RESERVED / APPLE MUSIC)")
+            if SPOTIFY_FIRST == "TRUE":
+                return local_check(path, 'RESERVED / APPLE MUSIC')
+            return local_check(path, 'APPLE MUSIC')
+        if SPOTIFY_FIRST == "TRUE":
+            print("FETCHING LYRICS, NEW SONG (RESERVED / APPLE MUSIC)")
+        elif SPOTIFY_FIRST == "FALSE":
+            print("FETCHING LYRICS, NEW SONG (APPLE MUSIC)")
         r = requests.get(
                 f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
             )
