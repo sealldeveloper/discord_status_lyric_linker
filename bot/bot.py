@@ -21,6 +21,7 @@ SPOTIFY_ID = os.environ.get("SPOTIFY_ID")
 SPOTIFY_SECRET = os.environ.get("SPOTIFY_SECRET")
 SPOTIFY_REDIRECT = os.environ.get("SPOTIFY_REDIRECT")
 CUSTOM_STATUS = os.environ.get("STATUS")
+CUSTOM_IDLE_STATUS = os.environ.get("STATUS_IDLE")
 LOCALLY_STORED = os.environ.get("LOCALLY_STORED")
 NITRO = os.environ.get("NITRO")
 
@@ -152,7 +153,7 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
                 TIMER.sleep()
                 return "", "NO SONG"
             request_if_different(
-                CUSTOM_STATUS,
+                CUSTOM_IDLE_STATUS,
                 "DISCORD: NOT CURRENTLY LISTENING UPDATE",
                 True
             )
@@ -369,7 +370,7 @@ if __name__ == "__main__":
                 song, l, rl, isrc = on_new_song(sp, song_last_played)
                 if not song:
                     grequest_if_different(
-                    CUSTOM_STATUS,
+                    CUSTOM_IDLE_STATUS,
                     "SPOTIFY: NOTHING PLAYING",
                     True
                     )
@@ -382,7 +383,7 @@ if __name__ == "__main__":
                     if not song["is_playing"]:
                         song = None
                         grequest_if_different(
-                        CUSTOM_STATUS,
+                        CUSTOM_IDLE_STATUS,
                         "SPOTIFY: CURRENTLY PAUSED",
                         True
                         )
