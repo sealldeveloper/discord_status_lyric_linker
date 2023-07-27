@@ -4,6 +4,7 @@ import platform
 import subprocess
 import sys
 import time
+import json
 
 import fpstimer
 import grequests
@@ -86,7 +87,7 @@ def send_grequest(text, paused):
     }
     if NITRO == "TRUE":
         jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_ID
-        if paused == True:
+        if paused:
             jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_IDLE_ID
             jsondata["custom_status"]["emoji_name"] = CUSTOM_STATUS_EMOJI_IDLE_NAME
     req = grequests.patch(
@@ -107,7 +108,7 @@ def send_request(text, paused):
     }
     if NITRO == "TRUE":
         jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_ID
-        if paused == True:
+        if paused:
             jsondata["custom_status"]["emoji_id"] = CUSTOM_STATUS_EMOJI_IDLE_ID
             jsondata["custom_status"]["emoji_name"] = CUSTOM_STATUS_EMOJI_IDLE_NAME
     requests.patch(
@@ -163,16 +164,16 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
     # formatted_currently_playing = f"{song_name} -- {artist_name}"
 
     # IF THERE ARE NO LYRICS
-    if lyrics["error"] is True or lyrics["syncType"] == "UNSYNCED":
+    if lyrics["error"] or lyrics["syncType"] == "UNSYNCED":
         # RESERVE LYRICS
-        if rlyrics is not False and "lines" in rlyrics and rlyrics["error"] is False:
+        if rlyrics is not False and "lines" in rlyrics and not rlyrics["error"]:
             next_line = get_next_line(rlyrics, current_time, song_length)
             if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
                 grequest_if_different("", "", False)
             elif (
                 last_played_line != next_line
             ):  # no need to update if the line hasn't changed.
-                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVE)", False)
+                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVED / APPLE MUSIC)", False)
                 last_played_line = next_line
         # If we've already been here (and it's the same song), don't bother changing again, just return.
         else:
@@ -236,7 +237,6 @@ def on_new_song(sp, last_played):
     if current_song is not None:
         isrc = current_song["item"]["external_ids"]["isrc"]
         if isrc != last_played or last_played == "":
-            print("FETCHING LYRICS, NEW SONG")
             track_id = current_song["item"]["uri"].split(":")[-1]
             current_lyrics = get_lyrics(track_id)
             reserve_lyrics = get_reserve_lyrics(isrc)
@@ -249,17 +249,35 @@ def on_new_song(sp, last_played):
 
 
 def get_lyrics(track_id):
-    return requests.get(
-        f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
-    ).json()
+    path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{track_id}-spotify.json'
+    if os.path.isfile(path):
+        print("FOUND LYRICS LOCALLY (SPOTIFY)")
+        with open(path, 'r') as f:
+            return json.load(f)
+    print("FETCHING LYRICS, NEW SONG (SPOTIFY)")
+    with open(path, 'w') as f:
+        data = requests.get(
+            f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
+        ).json()
+        json.dump(data, f)
+    return data
 
 
 def get_reserve_lyrics(isrc):
+    path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{isrc}-apple-music.json'
+    if os.path.isfile(path):
+        print("FOUND LYRICS LOCALLY (RESERVED / APPLE MUSIC)")
+        with open(path, 'r') as f:
+            return json.load(f)
+    print("FETCHING LYRICS, NEW SONG (RESERVED / APPLE MUSIC)")
     r = requests.get(
             f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
         )
     if(r.status_code != 200):
-        return {"error":True,"syncType":"UNSYNCED"}
+        data={"error":True,"syncType":"UNSYNCED"}
+        with open(path, 'w') as f:
+            json.dump(data, f)
+        return data
     try:
         rjson=r.json()
     except Exception:
@@ -278,7 +296,12 @@ def get_reserve_lyrics(isrc):
     except Exception:
         PrintException()
     if len(data["lines"]) == 0:
-        return {"error":True,"syncType":"UNSYNCED"}
+        data={"error":True,"syncType":"UNSYNCED"}
+        with open(path, 'w') as f:
+            json.dump(data, f)
+        return data
+    with open(path, 'w') as f:
+        json.dump(data, f)
     return data
 
 
@@ -326,7 +349,7 @@ if __name__ == "__main__":
                 == 0
             ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
                 song, l, rl, isrc = on_new_song(sp, song_last_played)
-                if song is False:
+                if not song:
                     grequest_if_different(
                     CUSTOM_STATUS,
                     "SPOTIFY: NOTHING PLAYING",
@@ -338,7 +361,7 @@ if __name__ == "__main__":
                 if rl is not False:
                     rlyrics=rl
                 if type(song) != bool:
-                    if song["is_playing"] is False:
+                    if not song["is_playing"]:
                         song = None
                         grequest_if_different(
                         CUSTOM_STATUS,
