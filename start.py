@@ -173,6 +173,8 @@ def main():
     """
     if not os.path.isfile(".env"):
         create_env_file(get_credentials())
+    if not os.path.exists('cache'):
+        os.makedirs('cache')
 
     checkvenv()
     clear()
