@@ -363,6 +363,9 @@ if __name__ == "__main__":
                 main_loops % (LYRIC_UPDATE_RATE_PER_SECOND * SECONDS_TO_SPOTIFY_RESYNC)
                 == 0
             ):  # we don't need to poll Spotify for the song contantly, once every 10 sec should work.
+                if LOCALLY_STORED == "TRUE":
+                    if not os.path.exists(f'{os.path.dirname(os.path.realpath(__file__))}/../cache'):
+                        os.makedirs(f'{os.path.dirname(os.path.realpath(__file__))}/../cache')
                 song, l, rl, isrc = on_new_song(sp, song_last_played)
                 if not song:
                     grequest_if_different(
