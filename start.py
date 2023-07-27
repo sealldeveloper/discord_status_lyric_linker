@@ -93,6 +93,7 @@ def create_env_file(creds: list):
         file.write(f"SPOTIFY_SECRET = {creds[2]}\n")
         file.write(f"SPOTIFY_REDIRECT = {creds[3]}\n")
         file.write(f"STATUS = {creds[4]}\n")
+        file.write(f"STATUS_IDLE = {creds[11]}\n")
         if creds[9] is False:
             file.write(f"STATUS_EMOJI_NAME = {creds[5]}\n")
             file.write("NITRO = FALSE\n")
@@ -102,6 +103,10 @@ def create_env_file(creds: list):
             file.write(f"STATUS_EMOJI_IDLE_NAME = {creds[7]}\n")
             file.write(f"STATUS_EMOJI_IDLE_ID = {creds[8]}\n")
             file.write("NITRO = TRUE\n")
+        if creds[10] is False:
+            file.write(f"LOCALLY_STORED = FALSE\n")
+        else:
+            file.write(f"LOCALLY_STORED = TRUE\n")
 
 
 def get_credentials():
@@ -127,6 +132,9 @@ def get_credentials():
     custom_status = input(
         "Enter custom status (shows when there is no lyrics/no song is playing): "
     )
+    custom_idle_status = input(
+        "Enter custom idle status (shows when its paused, or spotify is not being used. If you don't want to utilise this set the same status for this as you did before.): "
+    )
     custom_status_emoji = input("Do you want to use custom emoji? (y/n): ")
     if custom_status_emoji.lower() == "y":
         nitro = input("Do you want to use custom emoji (nitro only)? (y/n): ")
@@ -140,18 +148,20 @@ def get_credentials():
                 "This is the emoji that will be used for the status.\nKeep empty for none and to enable ♪\n"
                 "Emoji ID is required for custom emojis."
             )
-            status_emoji_name = input("Enter emoji name for status: ")
+            status_emoji_name = input("Enter emoji name for status (do not include the ':' on either side): ")
             status_emoji_id = input("Enter emoji ID for status: ")
             print(
                 "This is the emoji that will be used for the status WHEN IDLE. (If you want the same always just enter the same values as before.)\nKeep empty for none and to enable ♪\n"
                 "Emoji ID is required for custom emojis."
             )
-            status_emoji_idle_name = input("Enter emoji name for idle status: ")
+            status_emoji_idle_name = input("Enter emoji name for idle status (do not include the ':' on either side): ")
             status_emoji_idle_id = input("Enter emoji ID for idle status: ")
     else:
         nitro = False
         status_emoji_name = ""
         status_emoji_id = ""
+    locally_stored = input("Do you want to store lyrics locally once the song is listened to? This is recommended for speed and lack of API spamming (stops ratelimiting being so likely) (y/n): ")
+    locally_stored = locally_stored.lower() == "y"
 
     return [
         discord_token,
@@ -164,6 +174,8 @@ def get_credentials():
         status_emoji_idle_name,
         status_emoji_idle_id,
         nitro,
+        locally_stored,
+        custom_idle_status,
     ]
 
 
@@ -173,6 +185,8 @@ def main():
     """
     if not os.path.isfile(".env"):
         create_env_file(get_credentials())
+    if not os.path.exists('cache'):
+        os.makedirs('cache')
 
     checkvenv()
     clear()
