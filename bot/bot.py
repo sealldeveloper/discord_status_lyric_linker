@@ -166,7 +166,6 @@ def main(last_played_song, last_played_line, song, lyrics, rlyrics):
         # formatted_currently_playing = f"{song_name} -- {artist_name}"
 
         # IF THERE ARE NO LYRICS
-        print(lyrics)
         if lyrics["error"] or lyrics["syncType"] == "UNSYNCED":
             # RESERVE LYRICS
             if rlyrics is not False and "lines" in rlyrics and not rlyrics["error"]:
