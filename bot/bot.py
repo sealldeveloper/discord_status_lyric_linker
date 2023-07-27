@@ -143,71 +143,75 @@ def status_screen():  # working on, currently dead code
 
 
 def main(last_played_song, last_played_line, song, lyrics, rlyrics):
-    start = time.time()
+    try:
+        start = time.time()
 
-    # IF NO SONG IS PLAYING
-    if not song:
-        if last_played_line == "NO SONG":
+        # IF NO SONG IS PLAYING
+        if not song:
+            if last_played_line == "NO SONG":
+                TIMER.sleep()
+                return "", "NO SONG"
+            request_if_different(
+                CUSTOM_STATUS,
+                "DISCORD: NOT CURRENTLY LISTENING UPDATE",
+                True
+            )
             TIMER.sleep()
             return "", "NO SONG"
-        request_if_different(
-            CUSTOM_STATUS,
-            "DISCORD: NOT CURRENTLY LISTENING UPDATE",
-            True
-        )
-        TIMER.sleep()
-        return "", "NO SONG"
 
-    current_time = song["progress_ms"]
-    song_length = song["item"]["duration_ms"]
-    song_name = song["item"]["external_ids"]["isrc"]
-    # artist_name = song["item"]["artists"][0]["name"]
-    # formatted_currently_playing = f"{song_name} -- {artist_name}"
+        current_time = song["progress_ms"]
+        song_length = song["item"]["duration_ms"]
+        song_name = song["item"]["external_ids"]["isrc"]
+        # artist_name = song["item"]["artists"][0]["name"]
+        # formatted_currently_playing = f"{song_name} -- {artist_name}"
 
-    # IF THERE ARE NO LYRICS
-    if lyrics["error"] or lyrics["syncType"] == "UNSYNCED":
-        # RESERVE LYRICS
-        if rlyrics is not False and "lines" in rlyrics and not rlyrics["error"]:
-            next_line = get_next_line(rlyrics, current_time, song_length)
+        # IF THERE ARE NO LYRICS
+        print(lyrics)
+        if lyrics["error"] or lyrics["syncType"] == "UNSYNCED":
+            # RESERVE LYRICS
+            if rlyrics is not False and "lines" in rlyrics and not rlyrics["error"]:
+                next_line = get_next_line(rlyrics, current_time, song_length)
+                if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
+                    grequest_if_different("", "", False)
+                elif (
+                    last_played_line != next_line
+                ):  # no need to update if the line hasn't changed.
+                    grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVED / APPLE MUSIC)", False)
+                    last_played_line = next_line
+            # If we've already been here (and it's the same song), don't bother changing again, just return.
+            else:
+                if last_played_line == "NO LYRICS" and song_name == last_played_song:
+                    TIMER.sleep()
+                    return song_name, last_played_line
+                elif last_played_line == "PAUSED OR NOT PLAYING" and song_name == last_played_song:
+                    TIMER.sleep()
+                    return song_name, last_played_line
+                grequest_if_different(
+                    CUSTOM_STATUS,
+                    "DISCORD: NO SYNCED LYRICS",
+                    False
+                )
+                last_played_line = "NO LYRICS"
+                TIMER.sleep()
+                return song_name, last_played_line
+
+        # IF THERE ARE LYRICS
+        else:
+            next_line = get_next_line(lyrics, current_time, song_length)
             if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
                 grequest_if_different("", "", False)
             elif (
                 last_played_line != next_line
             ):  # no need to update if the line hasn't changed.
-                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE (RESERVED / APPLE MUSIC)", False)
+                grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE", False)
                 last_played_line = next_line
-        # If we've already been here (and it's the same song), don't bother changing again, just return.
-        else:
-            if last_played_line == "NO LYRICS" and song_name == last_played_song:
-                TIMER.sleep()
-                return song_name, last_played_line
-            elif last_played_line == "PAUSED OR NOT PLAYING" and song_name == last_played_song:
-                TIMER.sleep()
-                return song_name, last_played_line
-            grequest_if_different(
-                CUSTOM_STATUS,
-                "DISCORD: NO SYNCED LYRICS",
-                False
-            )
-            last_played_line = "NO LYRICS"
-            TIMER.sleep()
-            return song_name, last_played_line
-
-    # IF THERE ARE LYRICS
-    else:
-        next_line = get_next_line(lyrics, current_time, song_length)
-        if next_line == "♪" and CUSTOM_STATUS_EMOJI_NAME != "":
-            grequest_if_different("", "", False)
-        elif (
-            last_played_line != next_line
-        ):  # no need to update if the line hasn't changed.
-            grequest_if_different(next_line, "DISCORD: NEW LYRIC LINE", False)
-            last_played_line = next_line
-    TIMER.sleep()
-    end = time.time()
-    milliseconds = (end - start) * 1000
-    song["progress_ms"] += milliseconds
-    return song_name, last_played_line
+        TIMER.sleep()
+        end = time.time()
+        milliseconds = (end - start) * 1000
+        song["progress_ms"] += milliseconds
+        return song_name, last_played_line
+    except Exception:
+        PrintException()
 
 
 def get_next_line(lyrics, current_time, song_length):
@@ -249,67 +253,72 @@ def on_new_song(sp, last_played):
 
 
 def local_check(path, v):
-    if os.path.isfile(path):
-        print(f"FOUND LYRICS LOCALLY ({v})")
-        with open(path, 'r') as f:
-            return json.load(f)
+    print(f"FOUND LYRICS LOCALLY ({v})")
+    with open(path, 'r') as f:
+        return json.load(f)
 
 
 def get_lyrics(track_id):
-    if LOCALLY_STORED == "TRUE":
+    try:
         path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{track_id}-spotify.json'
-        return local_check(path, 'SPOTIFY')
-    print("FETCHING LYRICS, NEW SONG (SPOTIFY)")
-    data = requests.get(
-                f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
-            ).json()
-    if LOCALLY_STORED == "TRUE":
-        with open(path, 'w') as f:
-            json.dump(data, f)
-    return data
+        if LOCALLY_STORED == "TRUE" and os.path.isfile(path):
+            return local_check(path, 'SPOTIFY')
+        print("FETCHING LYRICS, NEW SONG (SPOTIFY)")
+        data = requests.get(
+                    f"https://spotify-lyric-api.herokuapp.com/?trackid={track_id}", timeout=10
+                ).json()
+        if LOCALLY_STORED == "TRUE":
+            with open(path, 'w') as f:
+                json.dump(data, f)
+        return data
+    except Exception:
+        PrintException()
 
 
 def get_reserve_lyrics(isrc):
-    if LOCALLY_STORED == "TRUE":
+    try:
         path=f'{os.path.dirname(os.path.realpath(__file__))}/../cache/{isrc}-apple-music.json'
-        return local_check(path, 'RESERVED / APPLE MUSIC')
-    print("FETCHING LYRICS, NEW SONG (RESERVED / APPLE MUSIC)")
-    r = requests.get(
-            f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
-        )
-    if(r.status_code != 200):
-        data={"error":True,"syncType":"UNSYNCED"}
+        if LOCALLY_STORED == "TRUE" and os.path.isfile(path):
+            return local_check(path, 'RESERVED / APPLE MUSIC')
+        print("FETCHING LYRICS, NEW SONG (RESERVED / APPLE MUSIC)")
+        r = requests.get(
+                f"https://beautiful-lyrics.socalifornian.live/lyrics/{isrc}", timeout=10
+            )
+        if(r.status_code != 200):
+            fakedata={"error":True,"syncType":"UNSYNCED"}
+            if LOCALLY_STORED == "TRUE":
+                with open(path, 'w') as f:
+                    json.dump(fakedata, f)
+            return fakedata
+        try:
+            rjson=r.json()
+        except Exception:
+            return {"error":True,"syncType":"UNSYNCED"}
+        html=BeautifulSoup(rjson["Content"],"html.parser")
+        data={"error":False,"syncType":"LINE_SYNCED", "lines":[]}
+        lines=html.find_all("p")
+        try:
+            for l in lines:
+                line=BeautifulSoup(str(l), "html.parser")
+                if line.p.has_attr("begin"):
+                    begin=timestamp_to_ms(line.p["begin"])
+                    end=timestamp_to_ms(line.p["end"])
+                    linedata={"startTimeMs":f"{begin}","words":f"{line.p.text}","syllables":[],"endTimeMs":f"{end}"}
+                    data["lines"].append(linedata)
+        except Exception:
+            PrintException()
+        if len(data["lines"]) == 0:
+            fakedata={"error":True,"syncType":"UNSYNCED"}
+            if LOCALLY_STORED == "TRUE":
+                with open(path, 'w') as f:
+                    json.dump(fakedata, f)
+            return fakedata
         if LOCALLY_STORED == "TRUE":
-            with open(path, 'w') as f:
-                json.dump(data, f)
+                with open(path, 'w') as f:
+                    json.dump(data, f)
         return data
-    try:
-        rjson=r.json()
-    except Exception:
-        return {"error":True,"syncType":"UNSYNCED"}
-    html=BeautifulSoup(rjson["Content"],"html.parser")
-    data={"error":False,"syncType":"LINE_SYNCED", "lines":[]}
-    lines=html.find_all("p")
-    try:
-        for l in lines:
-            line=BeautifulSoup(str(l), "html.parser")
-            if line.p.has_attr("begin"):
-                begin=timestamp_to_ms(line.p["begin"])
-                end=timestamp_to_ms(line.p["end"])
-                linedata={"startTimeMs":f"{begin}","words":f"{line.p.text}","syllables":[],"endTimeMs":f"{end}"}
-                data["lines"].append(linedata)
     except Exception:
         PrintException()
-    if len(data["lines"]) == 0:
-        data={"error":True,"syncType":"UNSYNCED"}
-        if LOCALLY_STORED == "TRUE":
-            with open(path, 'w') as f:
-                json.dump(data, f)
-        return data
-    if LOCALLY_STORED == "TRUE":
-            with open(path, 'w') as f:
-                json.dump(data, f)
-    return data
 
 
 def timestamp_to_ms(time):
