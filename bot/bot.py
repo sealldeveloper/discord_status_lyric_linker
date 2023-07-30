@@ -33,6 +33,7 @@ if NITRO == "TRUE":
     CUSTOM_STATUS_EMOJI_IDLE_ID = os.environ.get("STATUS_EMOJI_IDLE_ID")
 else:
     CUSTOM_STATUS_EMOJI_NAME = os.environ.get("STATUS_EMOJI_NAME")
+    CUSTOM_STATUS_EMOJI_IDLE_NAME = os.environ.get("STATUS_EMOJI_IDLE_NAME")
 
 SCOPE = "user-read-currently-playing"
 
@@ -225,7 +226,24 @@ def get_next_line(lyrics, current_time, song_length):
     try:
         min_time = 100000000
         next_line = ""
+        closest_line=0
         if "lines" in lyrics.keys():
+            count=0
+            for line in lyrics["lines"]:
+                milliseconds_past_line = current_time - round(float(line["startTimeMs"]))
+                if milliseconds_past_line < min_time and milliseconds_past_line > 0:
+                    min_time = milliseconds_past_line
+                    next_line = line["words"]
+                    closest_line=count
+                count+=1
+            line_current = lyrics["lines"][closest_line]
+            if closest_line < count-1:
+                line_ahead = lyrics["lines"][closest_line+1]
+                if "endTimeMs" in line_ahead.keys():
+                    if round(float(line_current['endTimeMs'])) != 0.0 and current_time > round(float(line_current["endTimeMs"])):
+                        timebetween=round(float(line_current["endTimeMs"]))-round(float(line_ahead["startTimeMs"]))
+                        if timebetween < -3000:
+                            next_line = "♪"
             if "endTimeMs" in lyrics["lines"][len(lyrics["lines"])-1].keys():
                 last_lyric=round(float(lyrics["lines"][len(lyrics["lines"])-1]["endTimeMs"]))
                 if last_lyric != 0.0 and current_time > last_lyric:
@@ -233,11 +251,6 @@ def get_next_line(lyrics, current_time, song_length):
             first_lyric=round(float(lyrics["lines"][0]['startTimeMs']))
             if current_time <= first_lyric:
                 next_line = "♪"
-            for line in lyrics["lines"]:
-                milliseconds_past_line = current_time - round(float(line["startTimeMs"]))
-                if milliseconds_past_line < min_time and milliseconds_past_line > 0:
-                    min_time = milliseconds_past_line
-                    next_line = line["words"]
         return next_line
     except Exception:
         PrintException()
