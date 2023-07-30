@@ -247,9 +247,10 @@ def get_next_line(lyrics, current_time, song_length):
             if closest_line is not count:
                 line_ahead = lyrics["lines"][closest_line+1]
                 if "endTimeMs" in line_ahead.keys():
-                    timebetween=round(float(line_current["endTimeMs"]))-round(float(line_ahead["startTimeMs"]))
-                    if timebetween < -3000:
-                        next_line = "♪"
+                    if round(float(line_current['endTimeMs'])) != 0.0 and current_time > round(float(line_current["endTimeMs"])):
+                        timebetween=round(float(line_current["endTimeMs"]))-round(float(line_ahead["startTimeMs"]))
+                        if timebetween < -3000:
+                            next_line = "♪"
         return next_line
     except Exception:
         PrintException()
