@@ -244,7 +244,7 @@ def get_next_line(lyrics, current_time, song_length):
                     closest_line=count
                 count+=1
             line_current = lyrics["lines"][closest_line]
-            if closest_line is not count:
+            if closest_line > count-1:
                 line_ahead = lyrics["lines"][closest_line+1]
                 if "endTimeMs" in line_ahead.keys():
                     if round(float(line_current['endTimeMs'])) != 0.0 and current_time > round(float(line_current["endTimeMs"])):
